@@ -23,6 +23,12 @@ serve(async (req) => {
       }
     )
 
+    // Create admin client to access user data
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
     // Get the current user
     const {
       data: { user },
@@ -34,22 +40,27 @@ serve(async (req) => {
 
     console.log('User found:', user.email)
 
-    // Get the session to access Google tokens
-    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession()
+    // Get the user's full auth data from admin client
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(user.id)
 
-    if (sessionError) {
-      console.error('Error fetching session:', sessionError)
-      throw new Error('Failed to fetch session data')
+    if (userError) {
+      console.error('Error fetching user data:', userError)
+      throw new Error('Failed to fetch user auth data')
     }
 
-    if (!sessionData.session) {
-      throw new Error('No active session found')
+    console.log('User auth data:', JSON.stringify(userData.user, null, 2))
+
+    // Extract Google tokens from the user's identities
+    const googleIdentity = userData.user.identities?.find(identity => identity.provider === 'google')
+    
+    if (!googleIdentity) {
+      throw new Error('No Google identity found for user')
     }
 
-    console.log('Session found for user:', sessionData.session.user.email)
+    console.log('Google identity found:', JSON.stringify(googleIdentity, null, 2))
 
-    const provider_token = sessionData.session.provider_token
-    const provider_refresh_token = sessionData.session.provider_refresh_token
+    const provider_token = googleIdentity.identity_data?.access_token
+    const provider_refresh_token = googleIdentity.identity_data?.refresh_token
 
     console.log('Provider token exists:', !!provider_token)
     console.log('Provider refresh token exists:', !!provider_refresh_token)
