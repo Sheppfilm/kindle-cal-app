@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface MonthViewProps {
@@ -23,8 +22,8 @@ export const MonthView: React.FC<MonthViewProps> = ({ currentTime }) => {
     const calendar = [];
     
     // Add days from previous month if needed
-    const prevMonth = new Date(year, month - 1, 0);
-    const daysInPrevMonth = prevMonth.getDate();
+    const prevMonthLastDay = new Date(year, month, 0);
+    const daysInPrevMonth = prevMonthLastDay.getDate();
     
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
       const prevDate = new Date(year, month - 1, daysInPrevMonth - i);
