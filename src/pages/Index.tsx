@@ -6,11 +6,13 @@ import { Clock } from "@/components/Clock";
 import { GoogleCalendarSettings } from "@/components/GoogleCalendarSettings";
 import { AuthPage } from "@/components/AuthPage";
 import { useAuth } from "@/hooks/useAuth";
+import { useOAuthCallback } from "@/hooks/useOAuthCallback";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
 const Index = () => {
   const { user, isLoading, signOut } = useAuth();
+  useOAuthCallback(); // Add this hook to capture OAuth tokens
   const [currentTime, setCurrentTime] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'next'>('day');
   const [showSettings, setShowSettings] = useState(false);

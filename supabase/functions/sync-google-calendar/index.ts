@@ -23,12 +23,6 @@ serve(async (req) => {
       }
     )
 
-    // Create admin client to access user data
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
     // Get the current user
     const {
       data: { user },
@@ -40,54 +34,31 @@ serve(async (req) => {
 
     console.log('User found:', user.email)
 
-    // Get the user's full auth data from admin client
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(user.id)
-
-    if (userError) {
-      console.error('Error fetching user data:', userError)
-      throw new Error('Failed to fetch user auth data')
-    }
-
-    console.log('User auth data:', JSON.stringify(userData.user, null, 2))
-
-    // Extract Google tokens from the user's identities
-    const googleIdentity = userData.user.identities?.find(identity => identity.provider === 'google')
-    
-    if (!googleIdentity) {
-      throw new Error('No Google identity found for user')
-    }
-
-    console.log('Google identity found:', JSON.stringify(googleIdentity, null, 2))
-
-    const provider_token = googleIdentity.identity_data?.access_token
-    const provider_refresh_token = googleIdentity.identity_data?.refresh_token
-
-    console.log('Provider token exists:', !!provider_token)
-    console.log('Provider refresh token exists:', !!provider_refresh_token)
-
-    if (!provider_token) {
-      throw new Error('Google Calendar not connected - no access token found. Please sign out and sign in again with Google to refresh your tokens.')
-    }
-
-    // Update the user's profile with the Google tokens
-    const { error: profileError } = await supabaseClient
+    // First, check if we have stored tokens in the profiles table
+    const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .upsert({
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name,
-        google_access_token: provider_token,
-        google_refresh_token: provider_refresh_token,
-        updated_at: new Date().toISOString(),
-      })
+      .select('google_access_token, google_refresh_token')
+      .eq('id', user.id)
+      .maybeSingle()
 
     if (profileError) {
-      console.error('Profile update error:', profileError)
+      console.error('Error fetching profile:', profileError)
+      throw new Error('Failed to fetch user profile')
+    }
+
+    let provider_token = profile?.google_access_token
+    let provider_refresh_token = profile?.google_refresh_token
+
+    console.log('Stored tokens - Access token exists:', !!provider_token)
+    console.log('Stored tokens - Refresh token exists:', !!provider_refresh_token)
+
+    if (!provider_token) {
+      throw new Error('Google Calendar not connected. Please sign out and sign in again with Google to grant calendar access.')
     }
 
     // Test the token by making a simple API call first
     console.log('Testing Google API access...')
-    const testResponse = await fetch(
+    let testResponse = await fetch(
       'https://www.googleapis.com/calendar/v3/users/me/calendarList',
       {
         headers: {
@@ -96,6 +67,51 @@ serve(async (req) => {
         },
       }
     )
+
+    // If token is expired, try to refresh it
+    if (testResponse.status === 401 && provider_refresh_token) {
+      console.log('Access token expired, attempting to refresh...')
+      
+      const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: Deno.env.get('GOOGLE_CLIENT_ID') ?? '',
+          client_secret: Deno.env.get('GOOGLE_CLIENT_SECRET') ?? '',
+          refresh_token: provider_refresh_token,
+          grant_type: 'refresh_token',
+        }),
+      })
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json()
+        provider_token = refreshData.access_token
+        
+        // Update the stored token
+        await supabaseClient
+          .from('profiles')
+          .update({ google_access_token: provider_token })
+          .eq('id', user.id)
+
+        console.log('Token refreshed successfully')
+        
+        // Test again with new token
+        testResponse = await fetch(
+          'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+          {
+            headers: {
+              Authorization: `Bearer ${provider_token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        )
+      } else {
+        console.error('Failed to refresh token:', await refreshResponse.text())
+        throw new Error('Google access token has expired and could not be refreshed. Please sign out and sign in again.')
+      }
+    }
 
     if (!testResponse.ok) {
       const errorText = await testResponse.text()

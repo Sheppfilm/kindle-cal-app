@@ -22,8 +22,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+          scopes: 'https://www.googleapis.com/auth/calendar.readonly openid email profile',
           redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
       
