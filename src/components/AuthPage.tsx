@@ -2,8 +2,6 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
@@ -13,43 +11,27 @@ interface AuthPageProps {
 }
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError('');
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-            emailRedirectTo: `${window.location.origin}/`,
-          },
-        });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+          redirectTo: `${window.location.origin}/`,
+        }
+      });
       
-      onAuthSuccess();
+      if (error) throw error;
+      
+      // The redirect will handle the success case
     } catch (error: any) {
       setError(error.message || 'An error occurred during authentication');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -69,7 +51,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
             CALENDAR
           </CardTitle>
           <CardDescription className="font-mono text-xs">
-            {isLogin ? 'Sign in to access your calendar' : 'Create your calendar account'}
+            Sign in with Google to access your calendar
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -81,75 +63,25 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
             </Alert>
           )}
 
-          <form onSubmit={handleAuth} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <Label htmlFor="fullName" className="font-mono text-xs">
-                  FULL NAME
-                </Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="font-mono border-black"
-                  required={!isLogin}
-                />
-              </div>
+          <Button
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full bg-black text-white hover:bg-gray-800 font-mono"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                SIGNING IN WITH GOOGLE...
+              </>
+            ) : (
+              'SIGN IN WITH GOOGLE'
             )}
-
-            <div>
-              <Label htmlFor="email" className="font-mono text-xs">
-                EMAIL
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="font-mono border-black"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password" className="font-mono text-xs">
-                PASSWORD
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="font-mono border-black"
-                required
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-black text-white hover:bg-gray-800 font-mono"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isLogin ? 'SIGNING IN...' : 'CREATING ACCOUNT...'}
-                </>
-              ) : (
-                isLogin ? 'SIGN IN' : 'CREATE ACCOUNT'
-              )}
-            </Button>
-          </form>
+          </Button>
 
           <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-xs font-mono text-gray-600 hover:text-black"
-            >
-              {isLogin ? 'Need an account? CREATE ONE' : 'Have an account? SIGN IN'}
-            </button>
+            <p className="text-xs font-mono text-gray-600">
+              This will allow the app to read your Google Calendar events
+            </p>
           </div>
         </CardContent>
       </Card>

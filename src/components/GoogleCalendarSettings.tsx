@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -43,59 +43,11 @@ export const GoogleCalendarSettings: React.FC = () => {
     enabled: !!user,
   });
 
-  // Google OAuth sign in mutation
-  const signInMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          scopes: 'https://www.googleapis.com/auth/calendar.readonly',
-          redirectTo: `${window.location.origin}/`,
-        }
-      });
-      
-      if (error) throw error;
-    },
-    onError: (error: any) => {
-      setError(error.message || 'Failed to connect to Google Calendar');
-    }
-  });
-
-  // Disconnect Google account mutation
-  const disconnectMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          google_access_token: null,
-          google_refresh_token: null,
-          google_sync_token: null,
-          last_sync: null
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
-      toast({
-        title: "Success",
-        description: "Disconnected from Google Calendar",
-      });
-    },
-    onError: (error: any) => {
-      setError(error.message || 'Failed to disconnect');
-    }
-  });
-
   // Sync calendar events mutation
   const syncMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !profile?.google_access_token) {
-        throw new Error('Google Calendar not connected');
+      if (!user) {
+        throw new Error('User not authenticated');
       }
 
       // Call our edge function to sync calendar events
@@ -118,7 +70,9 @@ export const GoogleCalendarSettings: React.FC = () => {
     }
   });
 
-  const isConnected = profile?.google_access_token;
+  // Since we're using Google OAuth through Supabase, the user is already connected
+  // We just need to check if they have Google tokens (which should be automatic)
+  const isConnected = user && user.app_metadata?.provider === 'google';
 
   if (profileLoading) {
     return (
@@ -141,7 +95,7 @@ export const GoogleCalendarSettings: React.FC = () => {
           GOOGLE CALENDAR
         </CardTitle>
         <CardDescription className="font-mono text-xs">
-          {isConnected ? 'Connected and ready to sync' : 'Connect your Google Calendar to sync events'}
+          {isConnected ? 'Connected via Google OAuth' : 'Sign in with Google to access your calendar'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -164,50 +118,28 @@ export const GoogleCalendarSettings: React.FC = () => {
               )}
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                onClick={() => syncMutation.mutate()}
-                disabled={syncMutation.isPending}
-                className="flex-1 bg-black text-white hover:bg-gray-800 font-mono"
-              >
-                {syncMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    SYNCING...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    SYNC NOW
-                  </>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => disconnectMutation.mutate()}
-                disabled={disconnectMutation.isPending}
-                className="border-black font-mono"
-              >
-                {disconnectMutation.isPending ? 'DISCONNECTING...' : 'DISCONNECT'}
-              </Button>
-            </div>
+            <Button
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              className="w-full bg-black text-white hover:bg-gray-800 font-mono"
+            >
+              {syncMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  SYNCING...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  SYNC CALENDAR NOW
+                </>
+              )}
+            </Button>
           </div>
         ) : (
-          <Button
-            onClick={() => signInMutation.mutate()}
-            disabled={signInMutation.isPending}
-            className="w-full bg-black text-white hover:bg-gray-800 font-mono"
-          >
-            {signInMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                CONNECTING...
-              </>
-            ) : (
-              'CONNECT TO GOOGLE'
-            )}
-          </Button>
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded font-mono text-xs">
+            ⚠️ Please sign in with Google to connect your calendar
+          </div>
         )}
       </CardContent>
     </Card>
