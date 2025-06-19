@@ -10,8 +10,7 @@ export const Clock: React.FC<ClockProps> = ({ currentTime }) => {
     return date.toLocaleTimeString('en-US', {
       hour12: false,
       hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+      minute: '2-digit'
     });
   };
 
@@ -25,11 +24,23 @@ export const Clock: React.FC<ClockProps> = ({ currentTime }) => {
   };
 
   return (
-    <div className="p-8 text-center">
-      <div className="text-6xl md:text-8xl font-bold tracking-wider mb-4">
+    <div style={{ padding: '20px', textAlign: 'center' }}>
+      <div style={{ 
+        fontSize: '48px', 
+        fontWeight: 'bold', 
+        letterSpacing: '4px', 
+        marginBottom: '10px',
+        fontFamily: 'monospace'
+      }}>
         {formatTime(currentTime)}
       </div>
-      <div className="text-lg md:text-xl font-bold tracking-widest text-gray-700">
+      <div style={{ 
+        fontSize: '16px', 
+        fontWeight: 'bold', 
+        letterSpacing: '2px',
+        color: '#666',
+        fontFamily: 'monospace'
+      }}>
         {formatDate(currentTime)}
       </div>
     </div>

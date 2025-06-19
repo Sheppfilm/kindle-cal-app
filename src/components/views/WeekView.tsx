@@ -29,28 +29,65 @@ export const WeekView: React.FC<WeekViewProps> = ({ currentTime }) => {
   ];
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6 tracking-tight">
+    <div style={{ padding: '20px' }}>
+      <h2 style={{ 
+        fontSize: '18px', 
+        fontWeight: 'bold', 
+        marginBottom: '20px',
+        letterSpacing: '2px',
+        fontFamily: 'monospace'
+      }}>
         WEEK VIEW
       </h2>
       
-      <div className="grid grid-cols-7 gap-0 border-2 border-black">
+      <div style={{ 
+        display: 'table', 
+        width: '100%', 
+        border: '2px solid black'
+      }}>
         {weekDays.map((day, index) => (
-          <div key={index} className="border-r border-black last:border-r-0">
-            <div className="p-3 border-b border-black bg-black text-white text-center">
-              <div className="font-bold text-xs">
+          <div key={index} style={{
+            display: 'table-cell',
+            width: '14.28%',
+            borderRight: index < 6 ? '1px solid black' : 'none'
+          }}>
+            <div style={{
+              padding: '10px',
+              borderBottom: '1px solid black',
+              backgroundColor: 'black',
+              color: 'white',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontWeight: 'bold',
+                fontSize: '10px',
+                marginBottom: '5px',
+                fontFamily: 'monospace'
+              }}>
                 {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
               </div>
-              <div className="text-lg font-bold">
+              <div style={{
+                fontSize: '16px',
+                fontWeight: 'bold',
+                fontFamily: 'monospace'
+              }}>
                 {day.getDate()}
               </div>
             </div>
             
-            <div className="h-64 p-2">
+            <div style={{ height: '150px', padding: '5px' }}>
               {mockEvents
                 .filter(event => event.day === index)
                 .map((event, eventIndex) => (
-                  <div key={eventIndex} className="bg-black text-white p-1 mb-1 text-xs font-bold">
+                  <div key={eventIndex} style={{
+                    backgroundColor: 'black',
+                    color: 'white',
+                    padding: '5px',
+                    marginBottom: '5px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    fontFamily: 'monospace'
+                  }}>
                     {event.time} {event.title}
                   </div>
                 ))}

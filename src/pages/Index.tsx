@@ -19,20 +19,17 @@ const Index = () => {
       setIsAuthenticated(true);
     }
 
-    // Update time every second
+    // Update time every minute instead of every second for Kindle
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000);
+    }, 60000);
 
     return () => clearInterval(timeInterval);
   }, []);
 
   const handleAuth = (username: string, password: string) => {
-    // Simple auth for now - in production this would connect to your backend
-    if (username && password) {
-      localStorage.setItem('calendar-auth', 'true');
-      setIsAuthenticated(true);
-    }
+    localStorage.setItem('calendar-auth', 'true');
+    setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
@@ -42,39 +39,87 @@ const Index = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: 'white', 
+        display: 'table-cell',
+        verticalAlign: 'middle',
+        textAlign: 'center',
+        padding: '20px'
+      }}>
         <AuthForm onAuth={handleAuth} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white text-black font-mono">
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: 'white', 
+      color: 'black', 
+      fontFamily: 'monospace'
+    }}>
       {/* Header */}
-      <div className="border-b-4 border-black p-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight">CALENDAR</h1>
-          <button 
-            onClick={handleLogout}
-            className="px-4 py-2 border-2 border-black bg-black text-white hover:bg-white hover:text-black transition-colors font-bold text-sm"
-          >
-            LOGOUT
-          </button>
+      <div style={{ 
+        borderBottom: '4px solid black', 
+        padding: '20px'
+      }}>
+        <div style={{ 
+          display: 'table', 
+          width: '100%'
+        }}>
+          <div style={{ 
+            display: 'table-cell', 
+            verticalAlign: 'middle'
+          }}>
+            <h1 style={{ 
+              fontSize: '20px', 
+              fontWeight: 'bold', 
+              letterSpacing: '2px',
+              margin: '0'
+            }}>
+              CALENDAR
+            </h1>
+          </div>
+          <div style={{ 
+            display: 'table-cell', 
+            verticalAlign: 'middle', 
+            textAlign: 'right'
+          }}>
+            <button 
+              onClick={handleLogout}
+              style={{
+                padding: '10px 15px',
+                border: '2px solid black',
+                backgroundColor: 'black',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '12px',
+                cursor: 'pointer',
+                fontFamily: 'monospace'
+              }}
+            >
+              LOGOUT
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Clock Section */}
-      <div className="border-b-4 border-black">
+      <div style={{ borderBottom: '4px solid black' }}>
         <Clock currentTime={currentTime} />
       </div>
 
       {/* View Toggle */}
-      <div className="border-b-4 border-black p-6">
+      <div style={{ 
+        borderBottom: '4px solid black', 
+        padding: '20px'
+      }}>
         <ViewToggle currentView={viewMode} onViewChange={setViewMode} />
       </div>
 
       {/* Calendar Content */}
-      <div className="flex-1">
+      <div>
         <CalendarView viewMode={viewMode} currentTime={currentTime} />
       </div>
     </div>

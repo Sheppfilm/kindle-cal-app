@@ -36,41 +36,78 @@ export const MonthView: React.FC<MonthViewProps> = ({ currentTime }) => {
   const mockEvents = [5, 12, 18, 25]; // Days with events
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6 tracking-tight">
+    <div style={{ padding: '20px' }}>
+      <h2 style={{ 
+        fontSize: '18px', 
+        fontWeight: 'bold', 
+        marginBottom: '20px',
+        letterSpacing: '2px',
+        fontFamily: 'monospace'
+      }}>
         {currentTime.toLocaleDateString('en-US', { 
           month: 'long', 
           year: 'numeric' 
         }).toUpperCase()}
       </h2>
       
-      <div className="border-2 border-black">
+      <div style={{ border: '2px solid black' }}>
         {/* Week day headers */}
-        <div className="grid grid-cols-7 gap-0">
+        <div style={{ display: 'table', width: '100%' }}>
           {weekDays.map((day) => (
-            <div key={day} className="p-3 border-r border-b border-black bg-black text-white text-center font-bold text-sm last:border-r-0">
+            <div key={day} style={{
+              display: 'table-cell',
+              padding: '10px',
+              borderRight: '1px solid black',
+              borderBottom: '1px solid black',
+              backgroundColor: 'black',
+              color: 'white',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '12px',
+              fontFamily: 'monospace'
+            }}>
               {day}
             </div>
           ))}
         </div>
         
         {/* Calendar days */}
-        <div className="grid grid-cols-7 gap-0">
-          {monthDays.map((day, index) => (
-            <div 
-              key={index} 
-              className="h-20 border-r border-b border-black p-2 last:border-r-0"
-            >
-              {day && (
-                <>
-                  <div className="font-bold text-sm mb-1">
-                    {day.getDate()}
-                  </div>
-                  {mockEvents.includes(day.getDate()) && (
-                    <div className="w-2 h-2 bg-black"></div>
+        <div>
+          {Array.from({ length: Math.ceil(monthDays.length / 7) }, (_, weekIndex) => (
+            <div key={weekIndex} style={{ display: 'table', width: '100%' }}>
+              {monthDays.slice(weekIndex * 7, weekIndex * 7 + 7).map((day, dayIndex) => (
+                <div 
+                  key={`${weekIndex}-${dayIndex}`}
+                  style={{
+                    display: 'table-cell',
+                    height: '60px',
+                    borderRight: dayIndex < 6 ? '1px solid black' : 'none',
+                    borderBottom: '1px solid black',
+                    padding: '5px',
+                    verticalAlign: 'top'
+                  }}
+                >
+                  {day && (
+                    <>
+                      <div style={{
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        marginBottom: '5px',
+                        fontFamily: 'monospace'
+                      }}>
+                        {day.getDate()}
+                      </div>
+                      {mockEvents.includes(day.getDate()) && (
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: 'black'
+                        }}></div>
+                      )}
+                    </>
                   )}
-                </>
-              )}
+                </div>
+              ))}
             </div>
           ))}
         </div>

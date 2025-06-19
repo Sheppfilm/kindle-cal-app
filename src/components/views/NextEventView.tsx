@@ -26,43 +26,96 @@ export const NextEventView: React.FC<NextEventViewProps> = ({ currentTime }) => 
   };
 
   return (
-    <div className="max-w-2xl">
-      <h2 className="text-2xl font-bold mb-8 tracking-tight">
+    <div style={{ padding: '20px', maxWidth: '600px' }}>
+      <h2 style={{ 
+        fontSize: '18px', 
+        fontWeight: 'bold', 
+        marginBottom: '30px',
+        letterSpacing: '2px',
+        fontFamily: 'monospace'
+      }}>
         NEXT EVENT
       </h2>
       
-      <div className="border-4 border-black p-8 bg-white">
-        <div className="text-center mb-8">
-          <div className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">
+      <div style={{ 
+        border: '4px solid black', 
+        padding: '30px', 
+        backgroundColor: 'white'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ 
+            fontSize: '24px', 
+            fontWeight: 'bold', 
+            marginBottom: '15px',
+            letterSpacing: '2px',
+            fontFamily: 'monospace'
+          }}>
             {nextEvent.title}
           </div>
-          <div className="text-2xl font-bold text-gray-700 mb-2">
+          <div style={{ 
+            fontSize: '20px', 
+            fontWeight: 'bold', 
+            color: '#666',
+            marginBottom: '10px',
+            fontFamily: 'monospace'
+          }}>
             {nextEvent.time.toLocaleTimeString('en-US', {
               hour12: false,
               hour: '2-digit',
               minute: '2-digit'
             })}
           </div>
-          <div className="text-lg font-bold">
+          <div style={{ 
+            fontSize: '16px', 
+            fontWeight: 'bold',
+            fontFamily: 'monospace'
+          }}>
             {nextEvent.location}
           </div>
         </div>
         
-        <div className="border-t-2 border-black pt-6 text-center">
-          <div className="text-sm font-bold text-gray-600 mb-2">
+        <div style={{ 
+          borderTop: '2px solid black', 
+          paddingTop: '20px', 
+          textAlign: 'center'
+        }}>
+          <div style={{ 
+            fontSize: '12px', 
+            fontWeight: 'bold', 
+            color: '#666',
+            marginBottom: '10px',
+            fontFamily: 'monospace'
+          }}>
             TIME REMAINING
           </div>
-          <div className="text-3xl font-bold">
+          <div style={{ 
+            fontSize: '28px', 
+            fontWeight: 'bold',
+            fontFamily: 'monospace'
+          }}>
             {getTimeUntilEvent(nextEvent.time)}
           </div>
         </div>
         
         {nextEvent.description && (
-          <div className="border-t-2 border-black pt-6 mt-6">
-            <div className="text-sm font-bold text-gray-600 mb-2">
+          <div style={{ 
+            borderTop: '2px solid black', 
+            paddingTop: '20px', 
+            marginTop: '20px'
+          }}>
+            <div style={{ 
+              fontSize: '12px', 
+              fontWeight: 'bold', 
+              color: '#666',
+              marginBottom: '10px',
+              fontFamily: 'monospace'
+            }}>
               DESCRIPTION
             </div>
-            <div className="font-bold">
+            <div style={{ 
+              fontWeight: 'bold',
+              fontFamily: 'monospace'
+            }}>
               {nextEvent.description}
             </div>
           </div>

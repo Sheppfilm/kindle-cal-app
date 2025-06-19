@@ -20,8 +20,14 @@ export const DayView: React.FC<DayViewProps> = ({ currentTime }) => {
   ];
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6 tracking-tight">
+    <div style={{ padding: '20px' }}>
+      <h2 style={{ 
+        fontSize: '18px', 
+        fontWeight: 'bold', 
+        marginBottom: '20px',
+        letterSpacing: '2px',
+        fontFamily: 'monospace'
+      }}>
         {currentTime.toLocaleDateString('en-US', { 
           weekday: 'long', 
           month: 'long', 
@@ -29,18 +35,40 @@ export const DayView: React.FC<DayViewProps> = ({ currentTime }) => {
         }).toUpperCase()}
       </h2>
       
-      <div className="space-y-0">
+      <div>
         {hours.map((hour) => {
           const event = mockEvents.find(e => e.time.startsWith(hour.toString().padStart(2, '0')));
           
           return (
-            <div key={hour} className="border-b border-black flex">
-              <div className="w-20 p-3 border-r border-black font-bold text-sm">
+            <div key={hour} style={{ 
+              borderBottom: '1px solid black', 
+              display: 'table',
+              width: '100%'
+            }}>
+              <div style={{
+                display: 'table-cell',
+                width: '80px',
+                padding: '10px',
+                borderRight: '1px solid black',
+                fontWeight: 'bold',
+                fontSize: '12px',
+                fontFamily: 'monospace'
+              }}>
                 {formatHour(hour)}
               </div>
-              <div className="flex-1 p-3">
+              <div style={{
+                display: 'table-cell',
+                padding: '10px'
+              }}>
                 {event && (
-                  <div className="bg-black text-white p-2 font-bold text-sm">
+                  <div style={{
+                    backgroundColor: 'black',
+                    color: 'white',
+                    padding: '8px',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    fontFamily: 'monospace'
+                  }}>
                     {event.title} ({event.duration})
                   </div>
                 )}
