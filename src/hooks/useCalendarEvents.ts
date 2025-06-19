@@ -1,7 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 export interface CalendarEvent {
   id: string;
@@ -57,7 +56,7 @@ export const useCreateCalendarEvent = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (event: TablesInsert<'calendar_events'>) => {
+    mutationFn: async (event: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('calendar_events')
         .insert([event])

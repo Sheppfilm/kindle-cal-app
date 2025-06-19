@@ -1,163 +1,133 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Calendar, Settings, RefreshCw } from 'lucide-react';
+import { Loader2, Calendar, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+interface UserProfile {
+  id: string;
+  google_access_token?: string;
+  google_refresh_token?: string;
+  last_sync?: string;
+}
 
 export const GoogleCalendarSettings: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [clientId, setClientId] = useState('');
-  const [storedClientId, setStoredClientId] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState('');
 
-  // Initialize Google Calendar hook with stored client ID
-  const {
-    isInitialized,
-    isSignedIn,
-    signIn,
-    signOut,
-    syncCalendar,
-    isSigningIn,
-    isSigningOut,
-    isSyncing,
-    error: googleError
-  } = useGoogleCalendar(storedClientId);
+  // Fetch user profile
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async (): Promise<UserProfile | null> => {
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, google_access_token, google_refresh_token, last_sync')
+        .eq('id', user.id)
+        .single();
 
-  // Load user's stored client ID and Google tokens
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('google_client_id, google_access_token')
-          .eq('id', user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error loading user data:', error);
-          return;
-        }
-
-        if (data?.google_client_id) {
-          setStoredClientId(data.google_client_id);
-          setClientId(data.google_client_id);
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error);
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
-    };
 
-    loadUserData();
-  }, [user]);
+      return data;
+    },
+    enabled: !!user,
+  });
 
-  const handleSaveClientId = async () => {
-    if (!user || !clientId.trim()) return;
+  // Google OAuth sign in mutation
+  const signInMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+          redirectTo: `${window.location.origin}/`,
+        }
+      });
+      
+      if (error) throw error;
+    },
+    onError: (error: any) => {
+      setError(error.message || 'Failed to connect to Google Calendar');
+    }
+  });
 
-    setIsLoading(true);
-    setError('');
+  // Disconnect Google account mutation
+  const disconnectMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('User not authenticated');
 
-    try {
       const { error } = await supabase
-        .from('users')
-        .update({ google_client_id: clientId.trim() })
+        .from('profiles')
+        .update({
+          google_access_token: null,
+          google_refresh_token: null,
+          google_sync_token: null,
+          last_sync: null
+        })
         .eq('id', user.id);
 
       if (error) throw error;
-
-      setStoredClientId(clientId.trim());
-      setShowSettings(false);
-      
-      toast({
-        title: "Success",
-        description: "Google Client ID saved successfully",
-      });
-    } catch (error: any) {
-      setError(error.message || 'Failed to save Client ID');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleConnect = async () => {
-    if (!storedClientId) {
-      setError('Please save your Google Client ID first');
-      return;
-    }
-
-    try {
-      await signIn();
-      toast({
-        title: "Success",
-        description: "Connected to Google Calendar successfully",
-      });
-    } catch (error: any) {
-      setError(error.message || 'Failed to connect to Google Calendar');
-    }
-  };
-
-  const handleDisconnect = async () => {
-    try {
-      await signOut();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       toast({
         title: "Success",
         description: "Disconnected from Google Calendar",
       });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       setError(error.message || 'Failed to disconnect');
     }
-  };
+  });
 
-  const handleSync = async () => {
-    try {
-      await syncCalendar();
+  // Sync calendar events mutation
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !profile?.google_access_token) {
+        throw new Error('Google Calendar not connected');
+      }
+
+      // Call our edge function to sync calendar events
+      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
+        body: { userId: user.id }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       toast({
         title: "Success",
-        description: "Calendar events synced successfully",
+        description: `Synced ${data?.count || 0} events from Google Calendar`,
       });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       setError(error.message || 'Failed to sync calendar');
     }
-  };
+  });
 
-  // Show current error from Google Calendar hook
-  useEffect(() => {
-    if (googleError) {
-      setError(googleError);
-    }
-  }, [googleError]);
+  const isConnected = profile?.google_access_token;
 
-  if (!storedClientId && !showSettings) {
+  if (profileLoading) {
     return (
       <Card className="border-2 border-black">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-mono">
-            <Calendar className="h-5 w-5" />
-            GOOGLE CALENDAR
-          </CardTitle>
-          <CardDescription className="font-mono text-xs">
-            Configure your Google Calendar connection
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            onClick={() => setShowSettings(true)}
-            className="w-full bg-black text-white hover:bg-gray-800 font-mono"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            CONFIGURE
-          </Button>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <span className="font-mono text-xs">Loading...</span>
+          </div>
         </CardContent>
       </Card>
     );
@@ -171,7 +141,7 @@ export const GoogleCalendarSettings: React.FC = () => {
           GOOGLE CALENDAR
         </CardTitle>
         <CardDescription className="font-mono text-xs">
-          {isSignedIn ? 'Connected and ready to sync' : 'Configure your Google Calendar connection'}
+          {isConnected ? 'Connected and ready to sync' : 'Connect your Google Calendar to sync events'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -183,121 +153,61 @@ export const GoogleCalendarSettings: React.FC = () => {
           </Alert>
         )}
 
-        {showSettings && (
+        {isConnected ? (
           <div className="space-y-3">
-            <div>
-              <Label htmlFor="clientId" className="font-mono text-xs">
-                GOOGLE CLIENT ID
-              </Label>
-              <Input
-                id="clientId"
-                type="text"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                placeholder="Enter your Google OAuth Client ID"
-                className="font-mono text-xs border-black"
-              />
-              <p className="text-xs text-gray-600 mt-1 font-mono">
-                Get this from Google Cloud Console → APIs & Services → Credentials
-              </p>
+            <div className="p-3 bg-green-50 border border-green-200 rounded font-mono text-xs">
+              ✓ GOOGLE CALENDAR CONNECTED
+              {profile?.last_sync && (
+                <div className="text-gray-600 mt-1">
+                  Last sync: {new Date(profile.last_sync).toLocaleString()}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">
               <Button
-                onClick={handleSaveClientId}
-                disabled={isLoading || !clientId.trim()}
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
                 className="flex-1 bg-black text-white hover:bg-gray-800 font-mono"
               >
-                {isLoading ? (
+                {syncMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    SAVING...
+                    SYNCING...
                   </>
                 ) : (
-                  'SAVE'
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    SYNC NOW
+                  </>
                 )}
               </Button>
-              
+
               <Button
                 variant="outline"
-                onClick={() => {
-                  setShowSettings(false);
-                  setClientId(storedClientId); // Reset to stored value
-                }}
+                onClick={() => disconnectMutation.mutate()}
+                disabled={disconnectMutation.isPending}
                 className="border-black font-mono"
               >
-                CANCEL
+                {disconnectMutation.isPending ? 'DISCONNECTING...' : 'DISCONNECT'}
               </Button>
             </div>
           </div>
-        )}
-
-        {storedClientId && !showSettings && (
-          <div className="space-y-3">
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded font-mono text-xs">
-              CLIENT ID: {storedClientId.substring(0, 20)}...
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSettings(true)}
-                className="ml-2 h-6 px-2 font-mono text-xs"
-              >
-                EDIT
-              </Button>
-            </div>
-
-            {isSignedIn ? (
-              <div className="space-y-3">
-                <div className="p-3 bg-green-50 border border-green-200 rounded font-mono text-xs">
-                  ✓ GOOGLE CALENDAR CONNECTED
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleSync}
-                    disabled={isSyncing || !isInitialized}
-                    className="flex-1 bg-black text-white hover:bg-gray-800 font-mono"
-                  >
-                    {isSyncing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        SYNCING...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        SYNC NOW
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={handleDisconnect}
-                    disabled={isSigningOut}
-                    className="border-black font-mono"
-                  >
-                    {isSigningOut ? 'DISCONNECTING...' : 'DISCONNECT'}
-                  </Button>
-                </div>
-              </div>
+        ) : (
+          <Button
+            onClick={() => signInMutation.mutate()}
+            disabled={signInMutation.isPending}
+            className="w-full bg-black text-white hover:bg-gray-800 font-mono"
+          >
+            {signInMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                CONNECTING...
+              </>
             ) : (
-              <Button
-                onClick={handleConnect}
-                disabled={isSigningIn || !isInitialized}
-                className="w-full bg-black text-white hover:bg-gray-800 font-mono"
-              >
-                {isSigningIn ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    CONNECTING...
-                  </>
-                ) : (
-                  'CONNECT TO GOOGLE'
-                )}
-              </Button>
+              'CONNECT TO GOOGLE'
             )}
-          </div>
+          </Button>
         )}
       </CardContent>
     </Card>

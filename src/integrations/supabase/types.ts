@@ -37,7 +37,7 @@ export type Database = {
           title: string
           transparency: string | null
           updated_at: string
-          user_id: string | null
+          user_id: string
           visibility: string | null
         }
         Insert: {
@@ -67,7 +67,7 @@ export type Database = {
           title: string
           transparency?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           visibility?: string | null
         }
         Update: {
@@ -97,70 +97,44 @@ export type Database = {
           title?: string
           transparency?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           visibility?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_events_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      users: {
+      profiles: {
         Row: {
           created_at: string
-          email: string
+          email: string | null
+          full_name: string | null
           google_access_token: string | null
-          google_calendar_id: string | null
-          google_calendar_watch_channel_id: string | null
-          google_calendar_watch_expiration: string | null
-          google_calendar_watch_resource_id: string | null
-          google_client_id: string | null
           google_refresh_token: string | null
           google_sync_token: string | null
-          google_timezone: string | null
           id: string
           last_sync: string | null
-          name: string | null
-          password_hash: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          email: string
+          email?: string | null
+          full_name?: string | null
           google_access_token?: string | null
-          google_calendar_id?: string | null
-          google_calendar_watch_channel_id?: string | null
-          google_calendar_watch_expiration?: string | null
-          google_calendar_watch_resource_id?: string | null
-          google_client_id?: string | null
           google_refresh_token?: string | null
           google_sync_token?: string | null
-          google_timezone?: string | null
-          id?: string
+          id: string
           last_sync?: string | null
-          name?: string | null
-          password_hash: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          email?: string
+          email?: string | null
+          full_name?: string | null
           google_access_token?: string | null
-          google_calendar_id?: string | null
-          google_calendar_watch_channel_id?: string | null
-          google_calendar_watch_expiration?: string | null
-          google_calendar_watch_resource_id?: string | null
-          google_client_id?: string | null
           google_refresh_token?: string | null
           google_sync_token?: string | null
-          google_timezone?: string | null
           id?: string
           last_sync?: string | null
-          name?: string | null
-          password_hash?: string
+          updated_at?: string
         }
         Relationships: []
       }
