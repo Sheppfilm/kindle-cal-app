@@ -9,7 +9,10 @@ export const WeekView: React.FC<WeekViewProps> = ({ currentTime }) => {
   const getWeekDays = (date: Date) => {
     const week = [];
     const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() - date.getDay());
+    // Start with Monday (1 = Monday, 0 = Sunday)
+    const dayOfWeek = date.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust for Monday start
+    startOfWeek.setDate(date.getDate() + diff);
     
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
@@ -29,53 +32,72 @@ export const WeekView: React.FC<WeekViewProps> = ({ currentTime }) => {
   ];
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2 style={{ 
-        fontSize: '18px', 
-        fontWeight: 'bold', 
-        marginBottom: '20px',
+    <div style={{ 
+      height: '100%', 
+      overflow: 'hidden',
+      padding: '10px'
+    }}>
+      <div style={{ 
+        height: '30px',
+        fontSize: '14px', 
+        fontWeight: 'bold',
         letterSpacing: '2px',
-        fontFamily: 'monospace'
+        fontFamily: 'monospace',
+        marginBottom: '10px'
       }}>
         WEEK VIEW
-      </h2>
+      </div>
       
       <div style={{ 
         display: 'table', 
         width: '100%', 
-        border: '2px solid black'
+        border: '2px solid black',
+        height: 'calc(100vh - 330px)',
+        tableLayout: 'fixed'
       }}>
         {weekDays.map((day, index) => (
           <div key={index} style={{
             display: 'table-cell',
-            width: '14.28%',
-            borderRight: index < 6 ? '1px solid black' : 'none'
+            borderRight: index < 6 ? '1px solid black' : 'none',
+            verticalAlign: 'top'
           }}>
             <div style={{
-              padding: '10px',
+              padding: '8px',
               borderBottom: '1px solid black',
               backgroundColor: 'black',
               color: 'white',
-              textAlign: 'center'
+              textAlign: 'center',
+              height: '50px',
+              display: 'table',
+              width: '100%'
             }}>
               <div style={{
-                fontWeight: 'bold',
-                fontSize: '10px',
-                marginBottom: '5px',
-                fontFamily: 'monospace'
+                display: 'table-cell',
+                verticalAlign: 'middle'
               }}>
-                {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
-              </div>
-              <div style={{
-                fontSize: '16px',
-                fontWeight: 'bold',
-                fontFamily: 'monospace'
-              }}>
-                {day.getDate()}
+                <div style={{
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  marginBottom: '3px',
+                  fontFamily: 'monospace'
+                }}>
+                  {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  fontFamily: 'monospace'
+                }}>
+                  {day.getDate()}
+                </div>
               </div>
             </div>
             
-            <div style={{ height: '150px', padding: '5px' }}>
+            <div style={{ 
+              height: 'calc(100vh - 430px)',
+              padding: '5px',
+              overflow: 'hidden'
+            }}>
               {mockEvents
                 .filter(event => event.day === index)
                 .map((event, eventIndex) => (
