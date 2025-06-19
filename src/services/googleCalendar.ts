@@ -66,7 +66,7 @@ export class GoogleCalendarService {
     });
   }
 
-  static async signIn(): Promise<gapi.auth2.AuthResponse> {
+  static async signIn(): Promise<any> {
     const authInstance = window.gapi.auth2.getAuthInstance();
     const user = await authInstance.signIn();
     return user.getAuthResponse();

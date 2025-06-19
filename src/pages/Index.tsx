@@ -84,8 +84,8 @@ const Index = () => {
         justifyContent: 'center'
       }}>
         <ViewToggle 
-          currentMode={viewMode} 
-          onModeChange={setViewMode} 
+          currentView={viewMode} 
+          onViewChange={setViewMode} 
         />
       </div>
 

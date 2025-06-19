@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Calendar, Settings, Sync } from 'lucide-react';
+import { Loader2, Calendar, Settings, RefreshCw } from 'lucide-react';
 
 export const GoogleCalendarSettings: React.FC = () => {
   const [clientId, setClientId] = useState('');
@@ -136,7 +136,7 @@ export const GoogleCalendarSettings: React.FC = () => {
 
             <div className="flex gap-2">
               <Button
-                onClick={handleSync}
+                onClick={() => handleSync()}
                 disabled={isSyncing}
                 className="flex-1 bg-black text-white hover:bg-gray-800 font-mono"
               >
@@ -147,7 +147,7 @@ export const GoogleCalendarSettings: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Sync className="h-4 w-4 mr-2" />
+                    <RefreshCw className="h-4 w-4 mr-2" />
                     SYNC NOW
                   </>
                 )}
@@ -155,7 +155,7 @@ export const GoogleCalendarSettings: React.FC = () => {
 
               <Button
                 variant="outline"
-                onClick={signOut}
+                onClick={() => signOut()}
                 disabled={isSigningOut}
                 className="border-black font-mono"
               >
