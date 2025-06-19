@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,11 +59,8 @@ export const GoogleCalendarSettings: React.FC = () => {
     try {
       const { error } = await supabase
         .from('users')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          google_client_id: clientId.trim(),
-        });
+        .update({ google_client_id: clientId.trim() })
+        .eq('id', user.id);
 
       if (error) throw error;
 
