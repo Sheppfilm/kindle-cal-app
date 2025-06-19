@@ -32,9 +32,10 @@ export const GoogleCalendarSettings: React.FC = () => {
         .from('profiles')
         .select('id, google_access_token, google_refresh_token, last_sync')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        console.error('Profile fetch error:', error);
         throw error;
       }
 
@@ -50,28 +51,41 @@ export const GoogleCalendarSettings: React.FC = () => {
         throw new Error('User not authenticated');
       }
 
+      console.log('Starting calendar sync...');
+
       // Call our edge function to sync calendar events
       const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
         body: { userId: user.id }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Sync error:', error);
+        throw error;
+      }
+      
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
       toast({
         title: "Success",
         description: `Synced ${data?.count || 0} events from Google Calendar`,
       });
+      setError('');
     },
     onError: (error: any) => {
+      console.error('Sync mutation error:', error);
       setError(error.message || 'Failed to sync calendar');
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to sync calendar',
+        variant: "destructive",
+      });
     }
   });
 
-  // Since we're using Google OAuth through Supabase, the user is already connected
-  // We just need to check if they have Google tokens (which should be automatic)
+  // Check if user is connected via Google OAuth
   const isConnected = user && user.app_metadata?.provider === 'google';
 
   if (profileLoading) {

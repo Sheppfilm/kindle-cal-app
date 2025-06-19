@@ -32,21 +32,32 @@ serve(async (req) => {
       throw new Error('No user found')
     }
 
-    const { userId } = await req.json()
+    console.log('User found:', user.email)
 
-    if (userId !== user.id) {
-      throw new Error('Unauthorized')
+    // For Google OAuth users, the tokens are in the user object
+    const provider_token = user.app_metadata?.provider_token
+    const provider_refresh_token = user.app_metadata?.provider_refresh_token
+
+    console.log('Provider token exists:', !!provider_token)
+
+    if (!provider_token) {
+      throw new Error('Google Calendar not connected - no access token found')
     }
 
-    // Get user's Google tokens from profiles
-    const { data: profile, error: profileError } = await supabaseClient
+    // Update the user's profile with the Google tokens
+    const { error: profileError } = await supabaseClient
       .from('profiles')
-      .select('google_access_token, google_refresh_token, google_sync_token')
-      .eq('id', user.id)
-      .single()
+      .upsert({
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+        google_access_token: provider_token,
+        google_refresh_token: provider_refresh_token,
+        updated_at: new Date().toISOString(),
+      })
 
-    if (profileError || !profile?.google_access_token) {
-      throw new Error('Google Calendar not connected')
+    if (profileError) {
+      console.error('Profile update error:', profileError)
     }
 
     // Fetch events from Google Calendar API
@@ -54,31 +65,32 @@ serve(async (req) => {
       maxResults: '250',
       singleEvents: 'true',
       orderBy: 'startTime',
+      timeMin: new Date().toISOString(),
     })
 
-    if (profile.google_sync_token) {
-      params.set('syncToken', profile.google_sync_token)
-    } else {
-      params.set('timeMin', new Date().toISOString())
-    }
+    console.log('Fetching calendar events...')
 
     const response = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
       {
         headers: {
-          Authorization: `Bearer ${profile.google_access_token}`,
+          Authorization: `Bearer ${provider_token}`,
           'Content-Type': 'application/json',
         },
       }
     )
 
     if (!response.ok) {
-      throw new Error(`Google Calendar API error: ${response.status}`)
+      const errorText = await response.text()
+      console.error('Google Calendar API error:', response.status, errorText)
+      throw new Error(`Google Calendar API error: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
     const events = data.items || []
     let syncedCount = 0
+
+    console.log('Found events:', events.length)
 
     // Process each event
     for (const event of events) {
@@ -128,16 +140,15 @@ serve(async (req) => {
       }
     }
 
-    // Update sync token and last sync time
-    if (data.nextSyncToken) {
-      await supabaseClient
-        .from('profiles')
-        .update({
-          google_sync_token: data.nextSyncToken,
-          last_sync: new Date().toISOString(),
-        })
-        .eq('id', user.id)
-    }
+    // Update last sync time
+    await supabaseClient
+      .from('profiles')
+      .update({
+        last_sync: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+
+    console.log('Sync completed:', syncedCount, 'events')
 
     return new Response(
       JSON.stringify({ success: true, count: syncedCount }),
