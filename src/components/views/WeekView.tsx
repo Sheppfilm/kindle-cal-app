@@ -1,35 +1,43 @@
 
 import React from 'react';
+import { useCalendarEvents } from '../../hooks/useCalendarEvents';
 
 interface WeekViewProps {
   currentTime: Date;
 }
 
 export const WeekView: React.FC<WeekViewProps> = ({ currentTime }) => {
+  const { data: events = [], isLoading } = useCalendarEvents();
+
   const getWeekDays = (date: Date) => {
-    const week = [];
     const startOfWeek = new Date(date);
-    // Start with Monday (1 = Monday, 0 = Sunday)
-    const dayOfWeek = date.getDay();
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust for Monday start
-    startOfWeek.setDate(date.getDate() + diff);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    startOfWeek.setDate(diff);
     
+    const weekDays = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
-      week.push(day);
+      weekDays.push(day);
     }
-    return week;
+    return weekDays;
   };
 
   const weekDays = getWeekDays(currentTime);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  // Mock weekly events
-  const mockEvents = [
-    { day: 1, time: '09:00', title: 'MEETING' },
-    { day: 3, time: '14:00', title: 'REVIEW' },
-    { day: 5, time: '16:00', title: 'CALL' }
-  ];
+  const getEventsForDayAndHour = (day: Date, hour: number) => {
+    return events.filter(event => {
+      const eventDate = new Date(event.start_time);
+      const eventHour = eventDate.getHours();
+      return eventDate.toDateString() === day.toDateString() && eventHour === hour;
+    });
+  };
+
+  if (isLoading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading events...</div>;
+  }
 
   return (
     <div style={{ 
@@ -38,81 +46,121 @@ export const WeekView: React.FC<WeekViewProps> = ({ currentTime }) => {
       padding: '10px'
     }}>
       <div style={{ 
-        height: '30px',
         fontSize: '14px', 
         fontWeight: 'bold',
         letterSpacing: '2px',
         fontFamily: 'monospace',
         marginBottom: '10px'
       }}>
-        WEEK VIEW
+        WEEK OF {weekDays[0].toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric' 
+        }).toUpperCase()}
       </div>
       
       <div style={{ 
-        display: 'table', 
-        width: '100%', 
         border: '2px solid black',
         height: 'calc(100vh - 330px)',
-        tableLayout: 'fixed'
+        overflow: 'auto'
       }}>
-        {weekDays.map((day, index) => (
-          <div key={index} style={{
-            display: 'table-cell',
-            borderRight: index < 6 ? '1px solid black' : 'none',
-            verticalAlign: 'top'
-          }}>
+        {/* Header with days */}
+        <div style={{ 
+          display: 'table',
+          width: '100%',
+          tableLayout: 'fixed',
+          position: 'sticky',
+          top: 0,
+          backgroundColor: 'white',
+          zIndex: 1
+        }}>
+          <div style={{ display: 'table-row' }}>
             <div style={{
-              padding: '8px',
+              display: 'table-cell',
+              width: '60px',
+              borderRight: '1px solid black',
               borderBottom: '1px solid black',
               backgroundColor: 'black',
               color: 'white',
               textAlign: 'center',
-              height: '50px',
-              display: 'table',
-              width: '100%'
+              padding: '5px',
+              fontSize: '8px',
+              fontFamily: 'monospace'
             }}>
+              TIME
+            </div>
+            {weekDays.map((day, index) => (
+              <div key={index} style={{
+                display: 'table-cell',
+                borderRight: index < 6 ? '1px solid black' : 'none',
+                borderBottom: '1px solid black',
+                backgroundColor: 'black',
+                color: 'white',
+                textAlign: 'center',
+                padding: '5px',
+                fontSize: '8px',
+                fontFamily: 'monospace'
+              }}>
+                {day.toLocaleDateString('en-US', { 
+                  weekday: 'short',
+                  day: 'numeric'
+                }).toUpperCase()}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Hours rows */}
+        {hours.map((hour) => (
+          <div key={hour} style={{ 
+            display: 'table',
+            width: '100%',
+            tableLayout: 'fixed',
+            minHeight: '40px'
+          }}>
+            <div style={{ display: 'table-row' }}>
               <div style={{
                 display: 'table-cell',
-                verticalAlign: 'middle'
+                width: '60px',
+                borderRight: '1px solid black',
+                borderBottom: '1px solid black',
+                padding: '5px',
+                fontSize: '9px',
+                fontFamily: 'monospace',
+                fontWeight: 'bold',
+                verticalAlign: 'top'
               }}>
-                <div style={{
-                  fontWeight: 'bold',
-                  fontSize: '10px',
-                  marginBottom: '3px',
-                  fontFamily: 'monospace'
-                }}>
-                  {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
-                </div>
-                <div style={{
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  fontFamily: 'monospace'
-                }}>
-                  {day.getDate()}
-                </div>
+                {hour.toString().padStart(2, '0')}:00
               </div>
-            </div>
-            
-            <div style={{ 
-              height: 'calc(100vh - 430px)',
-              padding: '5px',
-              overflow: 'hidden'
-            }}>
-              {mockEvents
-                .filter(event => event.day === index)
-                .map((event, eventIndex) => (
-                  <div key={eventIndex} style={{
-                    backgroundColor: 'black',
-                    color: 'white',
-                    padding: '5px',
-                    marginBottom: '5px',
-                    fontSize: '10px',
-                    fontWeight: 'bold',
-                    fontFamily: 'monospace'
+              {weekDays.map((day, dayIndex) => {
+                const dayEvents = getEventsForDayAndHour(day, hour);
+                return (
+                  <div key={dayIndex} style={{
+                    display: 'table-cell',
+                    borderRight: dayIndex < 6 ? '1px solid black' : 'none',
+                    borderBottom: '1px solid black',
+                    padding: '2px',
+                    verticalAlign: 'top',
+                    position: 'relative'
                   }}>
-                    {event.time} {event.title}
+                    {dayEvents.map((event) => (
+                      <div key={event.id} style={{
+                        backgroundColor: 'black',
+                        color: 'white',
+                        padding: '2px',
+                        marginBottom: '1px',
+                        fontSize: '7px',
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-word'
+                      }}>
+                        <div style={{ fontWeight: 'bold' }}>{event.title}</div>
+                        {event.location && (
+                          <div style={{ opacity: 0.7 }}>📍</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                );
+              })}
             </div>
           </div>
         ))}

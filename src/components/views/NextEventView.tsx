@@ -1,248 +1,190 @@
 
 import React from 'react';
+import { useCalendarEvents } from '../../hooks/useCalendarEvents';
 
 interface NextEventViewProps {
   currentTime: Date;
 }
 
 export const NextEventView: React.FC<NextEventViewProps> = ({ currentTime }) => {
-  // Mock events - replace with actual calendar data
-  // Filter out all-day events and get time-based events only
-  const mockEvents = [
-    { 
-      title: 'TEAM STANDUP', 
-      start: new Date(currentTime.getTime() + 30 * 60 * 1000), // 30 minutes from now
-      end: new Date(currentTime.getTime() + 60 * 60 * 1000), // 1 hour from now
-      location: 'ZOOM ROOM 1'
-    },
-    { 
-      title: 'PROJECT REVIEW', 
-      start: new Date(currentTime.getTime() + 90 * 60 * 1000), // 1.5 hours from now
-      end: new Date(currentTime.getTime() + 150 * 60 * 1000), // 2.5 hours from now
-      location: 'CONFERENCE ROOM B'
-    }
-  ];
+  const { data: events = [], isLoading } = useCalendarEvents();
 
-  const getCurrentEvent = () => {
-    return mockEvents.find(event => 
-      currentTime >= event.start && currentTime <= event.end
-    );
-  };
+  // Filter and sort upcoming events
+  const upcomingEvents = events
+    .filter(event => new Date(event.start_time) > currentTime)
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .slice(0, 10); // Show next 10 events
 
-  const getNextEvent = () => {
-    return mockEvents
-      .filter(event => event.start > currentTime)
-      .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
-  };
-
-  const getEventAfterNext = () => {
-    const nextEvent = getNextEvent();
-    if (!nextEvent) return null;
+  const formatEventTime = (startTime: string, endTime: string) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
     
-    return mockEvents
-      .filter(event => event.start > nextEvent.start && event.start <= new Date(currentTime.getTime() + 60 * 60 * 1000))
-      .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour12: false,
+    const startStr = start.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: false
     });
-  };
-
-  const getTimeRemaining = (eventEnd: Date) => {
-    const diff = eventEnd.getTime() - currentTime.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
     
-    if (hours > 0) {
-      return `${hours}H ${remainingMinutes}M REMAINING`;
-    }
-    return `${remainingMinutes}M REMAINING`;
-  };
-
-  const getTimeUntilEvent = (eventStart: Date) => {
-    const diff = eventStart.getTime() - currentTime.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
+    const endStr = end.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
     
-    if (hours > 0) {
-      return `STARTS IN ${hours}H ${remainingMinutes}M`;
-    }
-    return `STARTS IN ${remainingMinutes}M`;
+    return `${startStr} - ${endStr}`;
   };
 
-  const renderEventCard = (event: any, isCurrentEvent: boolean, isHalf: boolean = false) => {
-    const cardStyle = {
-      border: '4px solid black',
-      backgroundColor: 'white',
-      height: '100%',
-      width: isHalf ? '50%' : '100%',
-      display: 'inline-block',
-      verticalAlign: 'top',
-      boxSizing: 'border-box' as const,
-      padding: '0'
-    };
-
-    const contentHeight = 'calc(100vh - 260px)';
-
-    return (
-      <div style={cardStyle}>
-        <div style={{ 
-          height: contentHeight,
-          display: 'table',
-          width: '100%',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            display: 'table-cell',
-            verticalAlign: 'middle',
-            padding: '20px'
-          }}>
-            <div style={{ 
-              fontSize: isHalf ? '18px' : '32px', 
-              fontWeight: 'bold', 
-              marginBottom: '20px',
-              letterSpacing: '1px',
-              fontFamily: 'monospace'
-            }}>
-              {event.title}
-            </div>
-            
-            <div style={{ 
-              fontSize: isHalf ? '16px' : '24px', 
-              fontWeight: 'bold', 
-              color: '#666',
-              marginBottom: '15px',
-              fontFamily: 'monospace'
-            }}>
-              {formatTime(event.start)} - {formatTime(event.end)}
-            </div>
-            
-            <div style={{ 
-              fontSize: isHalf ? '14px' : '18px', 
-              fontWeight: 'bold',
-              marginBottom: '30px',
-              fontFamily: 'monospace'
-            }}>
-              {event.location}
-            </div>
-            
-            <div style={{ 
-              borderTop: '2px solid black', 
-              paddingTop: '30px',
-              margin: '0 20px'
-            }}>
-              {isCurrentEvent && (
-                <>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    fontWeight: 'bold', 
-                    color: '#666',
-                    marginBottom: '10px',
-                    fontFamily: 'monospace'
-                  }}>
-                    ● CURRENTLY RUNNING
-                  </div>
-                  <div style={{ 
-                    fontSize: isHalf ? '18px' : '28px', 
-                    fontWeight: 'bold',
-                    fontFamily: 'monospace'
-                  }}>
-                    {getTimeRemaining(event.end)}
-                  </div>
-                </>
-              )}
-              
-              {!isCurrentEvent && (
-                <div style={{ 
-                  fontSize: isHalf ? '16px' : '24px', 
-                  fontWeight: 'bold',
-                  fontFamily: 'monospace'
-                }}>
-                  {getTimeUntilEvent(event.start)}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  const getTimeUntil = (eventTime: string) => {
+    const now = currentTime.getTime();
+    const event = new Date(eventTime).getTime();
+    const diff = event - now;
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
-  const currentEvent = getCurrentEvent();
-  const nextEvent = getNextEvent();
-  const eventAfterNext = getEventAfterNext();
-
-  // State 1: Only current event
-  if (currentEvent && !eventAfterNext) {
+  if (isLoading) {
     return (
-      <div style={{ height: '100%', overflow: 'hidden' }}>
-        {renderEventCard(currentEvent, true)}
+      <div style={{ 
+        padding: '20px', 
+        textAlign: 'center',
+        fontFamily: 'monospace'
+      }}>
+        LOADING EVENTS...
       </div>
     );
   }
 
-  // State 2: Only next event
-  if (!currentEvent && nextEvent && !eventAfterNext) {
-    return (
-      <div style={{ height: '100%', overflow: 'hidden' }}>
-        {renderEventCard(nextEvent, false)}
-      </div>
-    );
-  }
-
-  // State 3: Current event + next event (both within 1 hour)
-  if (currentEvent && eventAfterNext) {
-    return (
-      <div style={{ height: '100%', overflow: 'hidden' }}>
-        {renderEventCard(currentEvent, true, true)}
-        {renderEventCard(eventAfterNext, false, true)}
-      </div>
-    );
-  }
-
-  // State 3 alternative: Next event + event after next (both within 1 hour)
-  if (!currentEvent && nextEvent && eventAfterNext) {
-    return (
-      <div style={{ height: '100%', overflow: 'hidden' }}>
-        {renderEventCard(nextEvent, false, true)}
-        {renderEventCard(eventAfterNext, false, true)}
-      </div>
-    );
-  }
-
-  // No events
   return (
     <div style={{ 
       height: '100%', 
       overflow: 'hidden',
-      display: 'table',
-      width: '100%'
+      padding: '10px'
     }}>
-      <div style={{
-        display: 'table-cell',
-        verticalAlign: 'middle',
-        textAlign: 'center'
+      <div style={{ 
+        fontSize: '14px', 
+        fontWeight: 'bold',
+        letterSpacing: '2px',
+        fontFamily: 'monospace',
+        marginBottom: '20px',
+        borderBottom: '2px solid black',
+        paddingBottom: '10px'
       }}>
-        <div style={{ 
-          border: '4px solid black', 
-          padding: '40px', 
-          backgroundColor: 'white',
-          margin: '20px'
-        }}>
-          <div style={{ 
-            fontSize: '24px', 
-            fontWeight: 'bold',
-            fontFamily: 'monospace'
+        UPCOMING EVENTS
+      </div>
+      
+      <div style={{
+        height: 'calc(100vh - 330px)',
+        overflow: 'auto'
+      }}>
+        {upcomingEvents.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            color: '#666',
+            marginTop: '50px'
           }}>
             NO UPCOMING EVENTS
           </div>
-        </div>
+        ) : (
+          upcomingEvents.map((event, index) => (
+            <div key={event.id} style={{
+              border: '2px solid black',
+              marginBottom: '15px',
+              padding: '15px',
+              backgroundColor: index === 0 ? '#f0f0f0' : 'white'
+            }}>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                fontFamily: 'monospace',
+                marginBottom: '8px',
+                letterSpacing: '1px'
+              }}>
+                {event.title.toUpperCase()}
+              </div>
+              
+              <div style={{
+                fontSize: '10px',
+                fontFamily: 'monospace',
+                marginBottom: '5px',
+                color: '#666'
+              }}>
+                {formatEventTime(event.start_time, event.end_time)}
+              </div>
+
+              <div style={{
+                fontSize: '10px',
+                fontFamily: 'monospace',
+                marginBottom: '8px',
+                fontWeight: 'bold'
+              }}>
+                IN {getTimeUntil(event.start_time)}
+              </div>
+
+              {event.location && (
+                <div style={{
+                  fontSize: '9px',
+                  fontFamily: 'monospace',
+                  marginBottom: '5px'
+                }}>
+                  📍 {event.location}
+                </div>
+              )}
+
+              {event.description && (
+                <div style={{
+                  fontSize: '9px',
+                  fontFamily: 'monospace',
+                  marginBottom: '5px',
+                  color: '#666'
+                }}>
+                  {event.description.substring(0, 100)}
+                  {event.description.length > 100 ? '...' : ''}
+                </div>
+              )}
+
+              {event.attendees && (
+                <div style={{
+                  fontSize: '9px',
+                  fontFamily: 'monospace',
+                  marginBottom: '5px'
+                }}>
+                  👥 {Array.isArray(event.attendees) ? event.attendees.length : 0} ATTENDEES
+                </div>
+              )}
+
+              {event.organizer_name && (
+                <div style={{
+                  fontSize: '9px',
+                  fontFamily: 'monospace',
+                  color: '#666'
+                }}>
+                  ORGANIZER: {event.organizer_name}
+                </div>
+              )}
+
+              {event.hangout_link && (
+                <div style={{
+                  fontSize: '9px',
+                  fontFamily: 'monospace',
+                  marginTop: '5px'
+                }}>
+                  🔗 VIDEO CALL AVAILABLE
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

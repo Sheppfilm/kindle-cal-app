@@ -9,7 +9,146 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      calendar_events: {
+        Row: {
+          all_day: boolean | null
+          attendees: Json | null
+          conference_data: Json | null
+          created_at: string
+          creator_email: string | null
+          creator_name: string | null
+          description: string | null
+          end_time: string
+          event_type: string | null
+          google_event_id: string
+          hangout_link: string | null
+          html_link: string | null
+          ical_uid: string | null
+          id: string
+          kind: string | null
+          location: string | null
+          organizer_email: string | null
+          organizer_name: string | null
+          raw_data: Json | null
+          recurrence: string[] | null
+          sequence: number | null
+          start_time: string
+          status: string | null
+          title: string
+          transparency: string | null
+          updated_at: string
+          user_id: string | null
+          visibility: string | null
+        }
+        Insert: {
+          all_day?: boolean | null
+          attendees?: Json | null
+          conference_data?: Json | null
+          created_at?: string
+          creator_email?: string | null
+          creator_name?: string | null
+          description?: string | null
+          end_time: string
+          event_type?: string | null
+          google_event_id: string
+          hangout_link?: string | null
+          html_link?: string | null
+          ical_uid?: string | null
+          id?: string
+          kind?: string | null
+          location?: string | null
+          organizer_email?: string | null
+          organizer_name?: string | null
+          raw_data?: Json | null
+          recurrence?: string[] | null
+          sequence?: number | null
+          start_time: string
+          status?: string | null
+          title: string
+          transparency?: string | null
+          updated_at?: string
+          user_id?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          all_day?: boolean | null
+          attendees?: Json | null
+          conference_data?: Json | null
+          created_at?: string
+          creator_email?: string | null
+          creator_name?: string | null
+          description?: string | null
+          end_time?: string
+          event_type?: string | null
+          google_event_id?: string
+          hangout_link?: string | null
+          html_link?: string | null
+          ical_uid?: string | null
+          id?: string
+          kind?: string | null
+          location?: string | null
+          organizer_email?: string | null
+          organizer_name?: string | null
+          raw_data?: Json | null
+          recurrence?: string[] | null
+          sequence?: number | null
+          start_time?: string
+          status?: string | null
+          title?: string
+          transparency?: string | null
+          updated_at?: string
+          user_id?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          google_access_token: string | null
+          google_calendar_id: string | null
+          google_refresh_token: string | null
+          google_timezone: string | null
+          id: string
+          last_sync: string | null
+          name: string | null
+          password_hash: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          google_access_token?: string | null
+          google_calendar_id?: string | null
+          google_refresh_token?: string | null
+          google_timezone?: string | null
+          id?: string
+          last_sync?: string | null
+          name?: string | null
+          password_hash: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          google_access_token?: string | null
+          google_calendar_id?: string | null
+          google_refresh_token?: string | null
+          google_timezone?: string | null
+          id?: string
+          last_sync?: string | null
+          name?: string | null
+          password_hash?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
