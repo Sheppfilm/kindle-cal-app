@@ -23,6 +23,12 @@ serve(async (req) => {
       }
     )
 
+    // Create admin client for accessing auth schema
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
     // Get the current user
     const {
       data: { user },
@@ -34,13 +40,13 @@ serve(async (req) => {
 
     console.log('User found:', user.email)
 
-    // Query the auth.identities table directly to get Google tokens
-    const { data: identities, error: identitiesError } = await supabaseClient
+    // Query the auth.identities table using admin client
+    const { data: identities, error: identitiesError } = await supabaseAdmin
       .from('auth.identities')
       .select('identity_data')
       .eq('user_id', user.id)
       .eq('provider', 'google')
-      .single()
+      .maybeSingle()
 
     if (identitiesError) {
       console.error('Error fetching identity:', identitiesError)
