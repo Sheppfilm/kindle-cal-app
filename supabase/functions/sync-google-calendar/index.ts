@@ -23,7 +23,7 @@ serve(async (req) => {
       }
     )
 
-    // Get the current user
+    // Get the current user and session
     const {
       data: { user },
     } = await supabaseClient.auth.getUser()
@@ -36,9 +36,17 @@ serve(async (req) => {
     console.log('User app_metadata:', JSON.stringify(user.app_metadata, null, 2))
     console.log('User user_metadata:', JSON.stringify(user.user_metadata, null, 2))
 
+    // Check if there are any identities with provider data
+    console.log('User identities:', JSON.stringify(user.identities, null, 2))
+
+    // Try to get tokens from session instead
+    const { data: { session } } = await supabaseClient.auth.getSession()
+    console.log('Session provider_token:', session?.provider_token)
+    console.log('Session provider_refresh_token:', session?.provider_refresh_token)
+
     // Try different ways to get the Google access token
-    let provider_token = user.app_metadata?.provider_token
-    let provider_refresh_token = user.app_metadata?.provider_refresh_token
+    let provider_token = session?.provider_token || user.app_metadata?.provider_token
+    let provider_refresh_token = session?.provider_refresh_token || user.app_metadata?.provider_refresh_token
 
     // If not in app_metadata, try user_metadata
     if (!provider_token) {
@@ -52,6 +60,19 @@ serve(async (req) => {
       if (googleProvider) {
         provider_token = googleProvider.access_token
         provider_refresh_token = googleProvider.refresh_token
+      }
+    }
+
+    // Try to get from identities
+    if (!provider_token && user.identities) {
+      const googleIdentity = user.identities.find((identity: any) => identity.provider === 'google')
+      if (googleIdentity) {
+        console.log('Google identity found:', JSON.stringify(googleIdentity, null, 2))
+        // Some OAuth providers store tokens in identity_data
+        if (googleIdentity.identity_data) {
+          provider_token = googleIdentity.identity_data.access_token
+          provider_refresh_token = googleIdentity.identity_data.refresh_token
+        }
       }
     }
 
