@@ -24,20 +24,20 @@ export const Clock: React.FC<ClockProps> = ({ currentTime }) => {
   };
 
   return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
+    <div style={{ padding: '10px', textAlign: 'center' }}>
       <div style={{ 
-        fontSize: '48px', 
+        fontSize: '36px', 
         fontWeight: 'bold', 
-        letterSpacing: '4px', 
-        marginBottom: '10px',
+        letterSpacing: '3px', 
+        marginBottom: '5px',
         fontFamily: 'monospace'
       }}>
         {formatTime(currentTime)}
       </div>
       <div style={{ 
-        fontSize: '16px', 
+        fontSize: '12px', 
         fontWeight: 'bold', 
-        letterSpacing: '2px',
+        letterSpacing: '1px',
         color: '#666',
         fontFamily: 'monospace'
       }}>

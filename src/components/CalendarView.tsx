@@ -29,7 +29,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ viewMode, currentTim
   };
 
   return (
-    <div className="p-6">
+    <div style={{ height: '100%', overflow: 'hidden' }}>
       {renderView()}
     </div>
   );

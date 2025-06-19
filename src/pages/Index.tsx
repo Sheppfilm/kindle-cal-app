@@ -19,7 +19,7 @@ const Index = () => {
       setIsAuthenticated(true);
     }
 
-    // Update time every minute instead of every second for Kindle
+    // Update time every minute for Kindle
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
@@ -28,8 +28,10 @@ const Index = () => {
   }, []);
 
   const handleAuth = (username: string, password: string) => {
-    localStorage.setItem('calendar-auth', 'true');
-    setIsAuthenticated(true);
+    if (username === 'admin' && password === 'calendar2024') {
+      localStorage.setItem('calendar-auth', 'true');
+      setIsAuthenticated(true);
+    }
   };
 
   const handleLogout = () => {
@@ -40,12 +42,14 @@ const Index = () => {
   if (!isAuthenticated) {
     return (
       <div style={{ 
-        minHeight: '100vh', 
+        height: '100vh', 
+        width: '100vw',
         backgroundColor: 'white', 
         display: 'table-cell',
         verticalAlign: 'middle',
         textAlign: 'center',
-        padding: '20px'
+        padding: '20px',
+        overflow: 'hidden'
       }}>
         <AuthForm onAuth={handleAuth} />
       </div>
@@ -54,73 +58,108 @@ const Index = () => {
 
   return (
     <div style={{ 
-      minHeight: '100vh', 
+      height: '100vh', 
+      width: '100vw',
       backgroundColor: 'white', 
       color: 'black', 
-      fontFamily: 'monospace'
+      fontFamily: 'monospace',
+      overflow: 'hidden',
+      display: 'table',
+      tableLayout: 'fixed'
     }}>
-      {/* Header */}
+      {/* Header - Fixed height */}
       <div style={{ 
-        borderBottom: '4px solid black', 
-        padding: '20px'
+        display: 'table-row',
+        height: '60px'
       }}>
         <div style={{ 
-          display: 'table', 
-          width: '100%'
+          borderBottom: '4px solid black', 
+          padding: '15px',
+          display: 'table-cell',
+          verticalAlign: 'middle'
         }}>
           <div style={{ 
-            display: 'table-cell', 
-            verticalAlign: 'middle'
+            display: 'table', 
+            width: '100%'
           }}>
-            <h1 style={{ 
-              fontSize: '20px', 
-              fontWeight: 'bold', 
-              letterSpacing: '2px',
-              margin: '0'
+            <div style={{ 
+              display: 'table-cell', 
+              verticalAlign: 'middle'
             }}>
-              CALENDAR
-            </h1>
-          </div>
-          <div style={{ 
-            display: 'table-cell', 
-            verticalAlign: 'middle', 
-            textAlign: 'right'
-          }}>
-            <button 
-              onClick={handleLogout}
-              style={{
-                padding: '10px 15px',
-                border: '2px solid black',
-                backgroundColor: 'black',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '12px',
-                cursor: 'pointer',
-                fontFamily: 'monospace'
-              }}
-            >
-              LOGOUT
-            </button>
+              <h1 style={{ 
+                fontSize: '18px', 
+                fontWeight: 'bold', 
+                letterSpacing: '2px',
+                margin: '0'
+              }}>
+                CALENDAR
+              </h1>
+            </div>
+            <div style={{ 
+              display: 'table-cell', 
+              verticalAlign: 'middle', 
+              textAlign: 'right'
+            }}>
+              <button 
+                onClick={handleLogout}
+                style={{
+                  padding: '8px 12px',
+                  border: '2px solid black',
+                  backgroundColor: 'black',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace'
+                }}
+              >
+                LOGOUT
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Clock Section */}
-      <div style={{ borderBottom: '4px solid black' }}>
-        <Clock currentTime={currentTime} />
-      </div>
-
-      {/* View Toggle */}
+      {/* Clock Section - Fixed height */}
       <div style={{ 
-        borderBottom: '4px solid black', 
-        padding: '20px'
+        display: 'table-row',
+        height: '120px'
       }}>
-        <ViewToggle currentView={viewMode} onViewChange={setViewMode} />
+        <div style={{ 
+          borderBottom: '4px solid black',
+          display: 'table-cell',
+          verticalAlign: 'middle'
+        }}>
+          <Clock currentTime={currentTime} />
+        </div>
       </div>
 
-      {/* Calendar Content */}
-      <div>
-        <CalendarView viewMode={viewMode} currentTime={currentTime} />
+      {/* View Toggle - Fixed height */}
+      <div style={{ 
+        display: 'table-row',
+        height: '80px'
+      }}>
+        <div style={{ 
+          borderBottom: '4px solid black', 
+          padding: '15px',
+          display: 'table-cell',
+          verticalAlign: 'middle'
+        }}>
+          <ViewToggle currentView={viewMode} onViewChange={setViewMode} />
+        </div>
+      </div>
+
+      {/* Calendar Content - Remaining space */}
+      <div style={{ 
+        display: 'table-row'
+      }}>
+        <div style={{ 
+          display: 'table-cell',
+          verticalAlign: 'top',
+          height: '100%'
+        }}>
+          <CalendarView viewMode={viewMode} currentTime={currentTime} />
+        </div>
       </div>
     </div>
   );
