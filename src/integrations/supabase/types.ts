@@ -119,6 +119,7 @@ export type Database = {
           google_calendar_watch_channel_id: string | null
           google_calendar_watch_expiration: string | null
           google_calendar_watch_resource_id: string | null
+          google_client_id: string | null
           google_refresh_token: string | null
           google_sync_token: string | null
           google_timezone: string | null
@@ -135,6 +136,7 @@ export type Database = {
           google_calendar_watch_channel_id?: string | null
           google_calendar_watch_expiration?: string | null
           google_calendar_watch_resource_id?: string | null
+          google_client_id?: string | null
           google_refresh_token?: string | null
           google_sync_token?: string | null
           google_timezone?: string | null
@@ -151,6 +153,7 @@ export type Database = {
           google_calendar_watch_channel_id?: string | null
           google_calendar_watch_expiration?: string | null
           google_calendar_watch_resource_id?: string | null
+          google_client_id?: string | null
           google_refresh_token?: string | null
           google_sync_token?: string | null
           google_timezone?: string | null
