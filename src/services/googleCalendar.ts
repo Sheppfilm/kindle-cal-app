@@ -1,4 +1,3 @@
-
 // Google Calendar API service
 export interface GoogleCalendarEvent {
   id: string;
@@ -60,16 +59,23 @@ export class GoogleCalendarService {
     }
 
     try {
+      // Validate client ID format
+      if (!clientId || !clientId.includes('.apps.googleusercontent.com')) {
+        throw new Error('Invalid Google Client ID format. Should end with .apps.googleusercontent.com');
+      }
+
       // Load Google API script if not already loaded
       if (!window.gapi) {
         console.log('Loading Google API script...');
         await this.loadGoogleApiScript();
       }
 
-      // Wait for gapi to be ready
+      // Wait for gapi to be ready with better error handling
+      console.log('Waiting for Google API to be ready...');
       await new Promise<void>((resolve, reject) => {
         const checkGapi = () => {
           if (window.gapi && window.gapi.load) {
+            console.log('Google API is ready');
             resolve();
           } else {
             setTimeout(checkGapi, 100);
@@ -77,35 +83,65 @@ export class GoogleCalendarService {
         };
         checkGapi();
         
-        // Timeout after 10 seconds
-        setTimeout(() => reject(new Error('Google API script timeout')), 10000);
+        // Timeout after 15 seconds
+        setTimeout(() => reject(new Error('Google API script loading timeout after 15 seconds')), 15000);
       });
 
-      console.log('Loading Google API modules...');
+      console.log('Loading Google API modules (auth2:client)...');
       
-      // Load required modules
+      // Load required modules with better error handling
       await new Promise<void>((resolve, reject) => {
         window.gapi.load('auth2:client', {
-          callback: resolve,
-          onerror: () => reject(new Error('Failed to load Google API modules'))
+          callback: () => {
+            console.log('Google API modules loaded successfully');
+            resolve();
+          },
+          onerror: (error: any) => {
+            console.error('Failed to load Google API modules:', error);
+            reject(new Error(`Failed to load Google API modules: ${JSON.stringify(error)}`));
+          }
         });
       });
 
-      console.log('Initializing Google API client...');
+      console.log('Initializing Google API client with specific configuration...');
 
-      // Initialize the client
-      await window.gapi.client.init({
+      // Initialize the client with more specific configuration
+      const initResult = await window.gapi.client.init({
         clientId: clientId,
         scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
+        plugin_name: 'calendar_app'
       });
+
+      console.log('Google API client initialization result:', initResult);
 
       this.isGapiInitialized = true;
       console.log('Google API initialized successfully');
+      
+      // Test if auth instance is available
+      const authInstance = window.gapi.auth2.getAuthInstance();
+      console.log('Auth instance available:', !!authInstance);
+      
     } catch (error) {
-      console.error('Failed to initialize Google API:', error);
+      console.error('Failed to initialize Google API - detailed error:', error);
       this.isGapiInitialized = false;
-      throw new Error(`Google API initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        if ('error' in error) {
+          errorMessage = `Google API Error: ${error.error}`;
+          if ('details' in error) {
+            errorMessage += ` - ${error.details}`;
+          }
+        } else {
+          errorMessage = JSON.stringify(error);
+        }
+      }
+      
+      throw new Error(`Google API initialization failed: ${errorMessage}`);
     }
   }
 
@@ -122,13 +158,13 @@ export class GoogleCalendarService {
       script.defer = true;
       
       script.onload = () => {
-        console.log('Google API script loaded');
+        console.log('Google API script loaded successfully');
         resolve();
       };
       
       script.onerror = (error) => {
         console.error('Failed to load Google API script:', error);
-        reject(new Error('Failed to load Google API script'));
+        reject(new Error('Failed to load Google API script - network or CORS issue'));
       };
       
       document.head.appendChild(script);
@@ -143,7 +179,11 @@ export class GoogleCalendarService {
     
     try {
       const authInstance = window.gapi.auth2.getAuthInstance();
-      const isSignedIn = authInstance?.isSignedIn?.get() || false;
+      if (!authInstance) {
+        console.log('No auth instance available');
+        return false;
+      }
+      const isSignedIn = authInstance.isSignedIn?.get() || false;
       console.log('Google sign-in status:', isSignedIn);
       return isSignedIn;
     } catch (error) {
@@ -154,13 +194,22 @@ export class GoogleCalendarService {
 
   static async signIn(): Promise<{ access_token: string; refresh_token?: string }> {
     if (!this.isGapiInitialized) {
-      throw new Error('Google API not initialized');
+      throw new Error('Google API not initialized. Please configure your Client ID first.');
     }
 
     try {
       const authInstance = window.gapi.auth2.getAuthInstance();
+      if (!authInstance) {
+        throw new Error('Google Auth instance not available');
+      }
+      
+      console.log('Starting Google sign-in process...');
       const user = await authInstance.signIn();
       const authResponse = user.getAuthResponse();
+
+      if (!authResponse.access_token) {
+        throw new Error('No access token received from Google');
+      }
 
       console.log('Google sign-in successful');
       return {
@@ -178,8 +227,10 @@ export class GoogleCalendarService {
 
     try {
       const authInstance = window.gapi.auth2.getAuthInstance();
-      await authInstance.signOut();
-      console.log('Google sign-out successful');
+      if (authInstance) {
+        await authInstance.signOut();
+        console.log('Google sign-out successful');
+      }
     } catch (error) {
       console.error('Google sign-out failed:', error);
       throw error;

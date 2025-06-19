@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +25,7 @@ export const useGoogleCalendar = (clientId?: string) => {
     const initGapi = async () => {
       if (!clientId) {
         console.log('No client ID provided, skipping initialization');
+        setState(prev => ({ ...prev, isLoading: false, error: null }));
         return;
       }
 
@@ -51,18 +51,19 @@ export const useGoogleCalendar = (clientId?: string) => {
         console.log('Google Calendar hook initialized successfully');
       } catch (error) {
         console.error('Google Calendar initialization failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to initialize Google Calendar';
         setState(prev => ({
           ...prev,
           isInitialized: false,
           isSignedIn: false,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to initialize Google Calendar'
+          error: errorMessage
         }));
       }
     };
 
     initGapi();
-  }, [clientId, state.isInitialized]);
+  }, [clientId]); // Remove state.isInitialized dependency to prevent re-initialization
 
   // Sign in mutation
   const signInMutation = useMutation({
