@@ -49,19 +49,21 @@ export interface GoogleCalendarEventsResponse {
 export class GoogleCalendarService {
   private static isGapiLoaded = false;
   private static isGapiInitialized = false;
+  private static currentClientId: string | null = null;
 
   static async initializeGapi(clientId: string): Promise<void> {
     console.log('Initializing Google API with client ID:', clientId.substring(0, 20) + '...');
     
-    if (this.isGapiInitialized) {
-      console.log('Google API already initialized');
-      return;
-    }
-
     try {
       // Validate client ID format
       if (!clientId || !clientId.includes('.apps.googleusercontent.com')) {
         throw new Error('Invalid Google Client ID format. Should end with .apps.googleusercontent.com');
+      }
+
+      // If already initialized with the same client ID, return early
+      if (this.isGapiInitialized && this.currentClientId === clientId) {
+        console.log('Google API already initialized with same client ID');
+        return;
       }
 
       // Load Google API script if not already loaded
@@ -70,7 +72,7 @@ export class GoogleCalendarService {
         await this.loadGoogleApiScript();
       }
 
-      // Wait for gapi to be ready with better error handling
+      // Wait for gapi to be ready
       console.log('Waiting for Google API to be ready...');
       await new Promise<void>((resolve, reject) => {
         const checkGapi = () => {
@@ -89,7 +91,7 @@ export class GoogleCalendarService {
 
       console.log('Loading Google API modules (auth2:client)...');
       
-      // Load required modules with better error handling
+      // Load required modules
       await new Promise<void>((resolve, reject) => {
         window.gapi.load('auth2:client', {
           callback: () => {
@@ -103,28 +105,57 @@ export class GoogleCalendarService {
         });
       });
 
-      console.log('Initializing Google API client with specific configuration...');
+      // Check if auth2 is already initialized
+      let authInstance;
+      try {
+        authInstance = window.gapi.auth2.getAuthInstance();
+        console.log('Checking existing auth instance:', !!authInstance);
+      } catch (e) {
+        console.log('No existing auth instance found');
+        authInstance = null;
+      }
 
-      // Initialize the client with more specific configuration
-      const initResult = await window.gapi.client.init({
+      if (authInstance) {
+        // Auth2 already initialized, check if it's with the same client ID
+        const currentOptions = authInstance.options || {};
+        if (currentOptions.client_id === clientId) {
+          console.log('Auth2 already initialized with same client ID');
+          this.isGapiInitialized = true;
+          this.currentClientId = clientId;
+          return;
+        } else {
+          console.log('Auth2 initialized with different client ID, will disconnect and reinitialize');
+          try {
+            await authInstance.disconnect();
+          } catch (e) {
+            console.log('Could not disconnect existing auth instance:', e);
+          }
+        }
+      }
+
+      // Initialize the client
+      console.log('Initializing Google API client...');
+      await window.gapi.client.init({
         clientId: clientId,
         scope: 'https://www.googleapis.com/auth/calendar.readonly',
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
         plugin_name: 'calendar_app'
       });
 
-      console.log('Google API client initialization result:', initResult);
+      console.log('Google API client initialization completed');
 
       this.isGapiInitialized = true;
+      this.currentClientId = clientId;
       console.log('Google API initialized successfully');
       
       // Test if auth instance is available
-      const authInstance = window.gapi.auth2.getAuthInstance();
-      console.log('Auth instance available:', !!authInstance);
+      const newAuthInstance = window.gapi.auth2.getAuthInstance();
+      console.log('New auth instance available:', !!newAuthInstance);
       
     } catch (error) {
       console.error('Failed to initialize Google API - detailed error:', error);
       this.isGapiInitialized = false;
+      this.currentClientId = null;
       
       // Provide more specific error messages
       let errorMessage = 'Unknown error occurred';

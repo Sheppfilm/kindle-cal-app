@@ -29,11 +29,6 @@ export const useGoogleCalendar = (clientId?: string) => {
         return;
       }
 
-      if (state.isInitialized) {
-        console.log('Already initialized, skipping');
-        return;
-      }
-
       console.log('Starting Google API initialization...');
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -63,7 +58,7 @@ export const useGoogleCalendar = (clientId?: string) => {
     };
 
     initGapi();
-  }, [clientId]); // Remove state.isInitialized dependency to prevent re-initialization
+  }, [clientId]);
 
   // Sign in mutation
   const signInMutation = useMutation({
