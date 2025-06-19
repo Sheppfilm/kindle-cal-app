@@ -1,7 +1,8 @@
 
+// Google Calendar API service
 export interface GoogleCalendarEvent {
   id: string;
-  summary: string;
+  summary?: string;
   description?: string;
   start: {
     dateTime?: string;
@@ -14,7 +15,6 @@ export interface GoogleCalendarEvent {
     timeZone?: string;
   };
   location?: string;
-  recurrence?: string[];
   status?: string;
   visibility?: string;
   creator?: {
@@ -30,6 +30,7 @@ export interface GoogleCalendarEvent {
     displayName?: string;
     responseStatus?: string;
   }>;
+  recurrence?: string[];
   conferenceData?: any;
   hangoutLink?: string;
   htmlLink?: string;
@@ -40,24 +41,34 @@ export interface GoogleCalendarEvent {
   eventType?: string;
 }
 
+export interface GoogleCalendarEventsResponse {
+  events: GoogleCalendarEvent[];
+  nextSyncToken?: string;
+  nextPageToken?: string;
+}
+
 export class GoogleCalendarService {
-  private static readonly DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  private static readonly SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+  private static isGapiLoaded = false;
+  private static isGapiInitialized = false;
 
   static async initializeGapi(clientId: string): Promise<void> {
+    if (this.isGapiInitialized) return;
+
     return new Promise((resolve, reject) => {
-      if (typeof window === 'undefined' || !window.gapi) {
+      if (!window.gapi) {
         reject(new Error('Google API not loaded'));
         return;
       }
 
-      window.gapi.load('client:auth2', async () => {
+      window.gapi.load('auth2:client', async () => {
         try {
           await window.gapi.client.init({
-            discoveryDocs: [this.DISCOVERY_DOC],
             clientId: clientId,
-            scope: this.SCOPES
+            scope: 'https://www.googleapis.com/auth/calendar.readonly',
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
           });
+
+          this.isGapiInitialized = true;
           resolve();
         } catch (error) {
           reject(error);
@@ -66,23 +77,33 @@ export class GoogleCalendarService {
     });
   }
 
-  static async signIn(): Promise<any> {
+  static isSignedIn(): boolean {
+    if (!this.isGapiInitialized || !window.gapi?.auth2) return false;
+    
+    const authInstance = window.gapi.auth2.getAuthInstance();
+    return authInstance?.isSignedIn?.get() || false;
+  }
+
+  static async signIn(): Promise<{ access_token: string; refresh_token?: string }> {
+    if (!this.isGapiInitialized) {
+      throw new Error('Google API not initialized');
+    }
+
     const authInstance = window.gapi.auth2.getAuthInstance();
     const user = await authInstance.signIn();
-    return user.getAuthResponse();
+    const authResponse = user.getAuthResponse();
+
+    return {
+      access_token: authResponse.access_token,
+      refresh_token: authResponse.refresh_token
+    };
   }
 
   static async signOut(): Promise<void> {
+    if (!this.isGapiInitialized) return;
+
     const authInstance = window.gapi.auth2.getAuthInstance();
     await authInstance.signOut();
-  }
-
-  static isSignedIn(): boolean {
-    if (typeof window === 'undefined' || !window.gapi?.auth2) {
-      return false;
-    }
-    const authInstance = window.gapi.auth2.getAuthInstance();
-    return authInstance?.isSignedIn?.get() || false;
   }
 
   static async getCalendarEvents(
@@ -91,20 +112,32 @@ export class GoogleCalendarService {
     timeMin?: string,
     timeMax?: string,
     syncToken?: string
-  ): Promise<{ events: GoogleCalendarEvent[]; nextSyncToken?: string }> {
-    const params = new URLSearchParams({
-      access_token: accessToken,
-      singleEvents: 'true',
-      orderBy: 'startTime',
-      maxResults: '250'
-    });
+  ): Promise<GoogleCalendarEventsResponse> {
+    const params: any = {
+      calendarId,
+      maxResults: 250,
+      singleEvents: true,
+      orderBy: 'startTime'
+    };
 
-    if (timeMin) params.append('timeMin', timeMin);
-    if (timeMax) params.append('timeMax', timeMax);
-    if (syncToken) params.append('syncToken', syncToken);
+    if (syncToken) {
+      params.syncToken = syncToken;
+    } else {
+      params.timeMin = timeMin || new Date().toISOString();
+      if (timeMax) {
+        params.timeMax = timeMax;
+      }
+    }
 
     const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+      new URLSearchParams(params).toString(),
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
     );
 
     if (!response.ok) {
@@ -112,36 +145,16 @@ export class GoogleCalendarService {
     }
 
     const data = await response.json();
+    
     return {
       events: data.items || [],
-      nextSyncToken: data.nextSyncToken
+      nextSyncToken: data.nextSyncToken,
+      nextPageToken: data.nextPageToken
     };
-  }
-
-  static async refreshAccessToken(refreshToken: string, clientId: string, clientSecret: string): Promise<string> {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-        client_id: clientId,
-        client_secret: clientSecret,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to refresh access token');
-    }
-
-    const data = await response.json();
-    return data.access_token;
   }
 }
 
-// Add Google API types to window
+// Extend the Window interface to include gapi
 declare global {
   interface Window {
     gapi: any;

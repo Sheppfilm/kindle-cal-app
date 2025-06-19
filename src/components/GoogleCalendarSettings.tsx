@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,17 +9,31 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Calendar, Settings, RefreshCw } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 export const GoogleCalendarSettings: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [clientId, setClientId] = useState('');
   const [storedClientId, setStoredClientId] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
 
-  // Load user's stored client ID
+  // Initialize Google Calendar hook with stored client ID
+  const {
+    isInitialized,
+    isSignedIn,
+    signIn,
+    signOut,
+    syncCalendar,
+    isSigningIn,
+    isSigningOut,
+    isSyncing,
+    error: googleError
+  } = useGoogleCalendar(storedClientId);
+
+  // Load user's stored client ID and Google tokens
   useEffect(() => {
     const loadUserData = async () => {
       if (!user) return;
@@ -37,10 +53,6 @@ export const GoogleCalendarSettings: React.FC = () => {
         if (data?.google_client_id) {
           setStoredClientId(data.google_client_id);
           setClientId(data.google_client_id);
-        }
-
-        if (data?.google_access_token) {
-          setIsConnected(true);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -66,7 +78,11 @@ export const GoogleCalendarSettings: React.FC = () => {
 
       setStoredClientId(clientId.trim());
       setShowSettings(false);
-      console.log('Client ID saved successfully');
+      
+      toast({
+        title: "Success",
+        description: "Google Client ID saved successfully",
+      });
     } catch (error: any) {
       setError(error.message || 'Failed to save Client ID');
     } finally {
@@ -80,47 +96,47 @@ export const GoogleCalendarSettings: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-
     try {
-      // Initialize Google API with stored client ID
-      // This would trigger the actual Google OAuth flow
-      console.log('Connecting with client ID:', storedClientId);
-      // TODO: Implement actual Google OAuth connection
-      setIsConnected(true);
+      await signIn();
+      toast({
+        title: "Success",
+        description: "Connected to Google Calendar successfully",
+      });
     } catch (error: any) {
-      setError(error.message || 'Failed to connect to Google');
-    } finally {
-      setIsLoading(false);
+      setError(error.message || 'Failed to connect to Google Calendar');
     }
   };
 
   const handleDisconnect = async () => {
-    if (!user) return;
-
-    setIsLoading(true);
-
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          google_access_token: null,
-          google_refresh_token: null,
-          google_sync_token: null,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      setIsConnected(false);
-      console.log('Disconnected from Google Calendar');
+      await signOut();
+      toast({
+        title: "Success",
+        description: "Disconnected from Google Calendar",
+      });
     } catch (error: any) {
       setError(error.message || 'Failed to disconnect');
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const handleSync = async () => {
+    try {
+      await syncCalendar();
+      toast({
+        title: "Success",
+        description: "Calendar events synced successfully",
+      });
+    } catch (error: any) {
+      setError(error.message || 'Failed to sync calendar');
+    }
+  };
+
+  // Show current error from Google Calendar hook
+  useEffect(() => {
+    if (googleError) {
+      setError(googleError);
+    }
+  }, [googleError]);
 
   if (!storedClientId && !showSettings) {
     return (
@@ -155,7 +171,7 @@ export const GoogleCalendarSettings: React.FC = () => {
           GOOGLE CALENDAR
         </CardTitle>
         <CardDescription className="font-mono text-xs">
-          {isConnected ? 'Connected and ready to sync' : 'Configure your Google Calendar connection'}
+          {isSignedIn ? 'Connected and ready to sync' : 'Configure your Google Calendar connection'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -204,7 +220,10 @@ export const GoogleCalendarSettings: React.FC = () => {
               
               <Button
                 variant="outline"
-                onClick={() => setShowSettings(false)}
+                onClick={() => {
+                  setShowSettings(false);
+                  setClientId(storedClientId); // Reset to stored value
+                }}
                 className="border-black font-mono"
               >
                 CANCEL
@@ -227,7 +246,7 @@ export const GoogleCalendarSettings: React.FC = () => {
               </Button>
             </div>
 
-            {isConnected ? (
+            {isSignedIn ? (
               <div className="space-y-3">
                 <div className="p-3 bg-green-50 border border-green-200 rounded font-mono text-xs">
                   ✓ GOOGLE CALENDAR CONNECTED
@@ -235,31 +254,40 @@ export const GoogleCalendarSettings: React.FC = () => {
 
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => console.log('Sync calendar')}
-                    disabled={isLoading}
+                    onClick={handleSync}
+                    disabled={isSyncing || !isInitialized}
                     className="flex-1 bg-black text-white hover:bg-gray-800 font-mono"
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    SYNC NOW
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        SYNCING...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        SYNC NOW
+                      </>
+                    )}
                   </Button>
 
                   <Button
                     variant="outline"
                     onClick={handleDisconnect}
-                    disabled={isLoading}
+                    disabled={isSigningOut}
                     className="border-black font-mono"
                   >
-                    DISCONNECT
+                    {isSigningOut ? 'DISCONNECTING...' : 'DISCONNECT'}
                   </Button>
                 </div>
               </div>
             ) : (
               <Button
                 onClick={handleConnect}
-                disabled={isLoading}
+                disabled={isSigningIn || !isInitialized}
                 className="w-full bg-black text-white hover:bg-gray-800 font-mono"
               >
-                {isLoading ? (
+                {isSigningIn ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     CONNECTING...
