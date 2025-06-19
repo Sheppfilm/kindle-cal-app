@@ -33,15 +33,48 @@ serve(async (req) => {
     }
 
     console.log('User found:', user.email)
+    console.log('User app_metadata:', JSON.stringify(user.app_metadata, null, 2))
+    console.log('User user_metadata:', JSON.stringify(user.user_metadata, null, 2))
 
-    // For Google OAuth users, the tokens are in the user object
-    const provider_token = user.app_metadata?.provider_token
-    const provider_refresh_token = user.app_metadata?.provider_refresh_token
+    // Try different ways to get the Google access token
+    let provider_token = user.app_metadata?.provider_token
+    let provider_refresh_token = user.app_metadata?.provider_refresh_token
+
+    // If not in app_metadata, try user_metadata
+    if (!provider_token) {
+      provider_token = user.user_metadata?.provider_token
+      provider_refresh_token = user.user_metadata?.provider_refresh_token
+    }
+
+    // Try to get from providers array
+    if (!provider_token && user.app_metadata?.providers) {
+      const googleProvider = user.app_metadata.providers.find((p: any) => p.provider === 'google')
+      if (googleProvider) {
+        provider_token = googleProvider.access_token
+        provider_refresh_token = googleProvider.refresh_token
+      }
+    }
 
     console.log('Provider token exists:', !!provider_token)
+    console.log('Provider refresh token exists:', !!provider_refresh_token)
 
     if (!provider_token) {
-      throw new Error('Google Calendar not connected - no access token found')
+      // Check if user has existing tokens in profile
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('google_access_token, google_refresh_token')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profile?.google_access_token) {
+        provider_token = profile.google_access_token
+        provider_refresh_token = profile.google_refresh_token
+        console.log('Using tokens from profile')
+      }
+    }
+
+    if (!provider_token) {
+      throw new Error('Google Calendar not connected - no access token found. Please sign out and sign in again with Google to refresh your tokens.')
     }
 
     // Update the user's profile with the Google tokens
@@ -59,6 +92,31 @@ serve(async (req) => {
     if (profileError) {
       console.error('Profile update error:', profileError)
     }
+
+    // Test the token by making a simple API call first
+    console.log('Testing Google API access...')
+    const testResponse = await fetch(
+      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+      {
+        headers: {
+          Authorization: `Bearer ${provider_token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    if (!testResponse.ok) {
+      const errorText = await testResponse.text()
+      console.error('Google API test failed:', testResponse.status, errorText)
+      
+      if (testResponse.status === 401) {
+        throw new Error('Google access token has expired. Please sign out and sign in again to refresh your connection.')
+      }
+      
+      throw new Error(`Google Calendar API error: ${testResponse.status} - ${errorText}`)
+    }
+
+    console.log('Google API access test successful')
 
     // Fetch events from Google Calendar API
     const params = new URLSearchParams({
