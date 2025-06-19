@@ -23,7 +23,7 @@ serve(async (req) => {
       }
     )
 
-    // Get the current user and session
+    // Get the current user
     const {
       data: { user },
     } = await supabaseClient.auth.getUser()
@@ -33,66 +33,31 @@ serve(async (req) => {
     }
 
     console.log('User found:', user.email)
-    console.log('User app_metadata:', JSON.stringify(user.app_metadata, null, 2))
-    console.log('User user_metadata:', JSON.stringify(user.user_metadata, null, 2))
 
-    // Check if there are any identities with provider data
-    console.log('User identities:', JSON.stringify(user.identities, null, 2))
+    // Query the auth.identities table directly to get Google tokens
+    const { data: identities, error: identitiesError } = await supabaseClient
+      .from('auth.identities')
+      .select('identity_data')
+      .eq('user_id', user.id)
+      .eq('provider', 'google')
+      .single()
 
-    // Try to get tokens from session instead
-    const { data: { session } } = await supabaseClient.auth.getSession()
-    console.log('Session provider_token:', session?.provider_token)
-    console.log('Session provider_refresh_token:', session?.provider_refresh_token)
-
-    // Try different ways to get the Google access token
-    let provider_token = session?.provider_token || user.app_metadata?.provider_token
-    let provider_refresh_token = session?.provider_refresh_token || user.app_metadata?.provider_refresh_token
-
-    // If not in app_metadata, try user_metadata
-    if (!provider_token) {
-      provider_token = user.user_metadata?.provider_token
-      provider_refresh_token = user.user_metadata?.provider_refresh_token
+    if (identitiesError) {
+      console.error('Error fetching identity:', identitiesError)
+      throw new Error('Failed to fetch Google identity data')
     }
 
-    // Try to get from providers array
-    if (!provider_token && user.app_metadata?.providers) {
-      const googleProvider = user.app_metadata.providers.find((p: any) => p.provider === 'google')
-      if (googleProvider) {
-        provider_token = googleProvider.access_token
-        provider_refresh_token = googleProvider.refresh_token
-      }
+    if (!identities?.identity_data) {
+      throw new Error('No Google identity data found')
     }
 
-    // Try to get from identities
-    if (!provider_token && user.identities) {
-      const googleIdentity = user.identities.find((identity: any) => identity.provider === 'google')
-      if (googleIdentity) {
-        console.log('Google identity found:', JSON.stringify(googleIdentity, null, 2))
-        // Some OAuth providers store tokens in identity_data
-        if (googleIdentity.identity_data) {
-          provider_token = googleIdentity.identity_data.access_token
-          provider_refresh_token = googleIdentity.identity_data.refresh_token
-        }
-      }
-    }
+    console.log('Identity data found:', JSON.stringify(identities.identity_data, null, 2))
+
+    const provider_token = identities.identity_data.access_token
+    const provider_refresh_token = identities.identity_data.refresh_token
 
     console.log('Provider token exists:', !!provider_token)
     console.log('Provider refresh token exists:', !!provider_refresh_token)
-
-    if (!provider_token) {
-      // Check if user has existing tokens in profile
-      const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('google_access_token, google_refresh_token')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (profile?.google_access_token) {
-        provider_token = profile.google_access_token
-        provider_refresh_token = profile.google_refresh_token
-        console.log('Using tokens from profile')
-      }
-    }
 
     if (!provider_token) {
       throw new Error('Google Calendar not connected - no access token found. Please sign out and sign in again with Google to refresh your tokens.')
