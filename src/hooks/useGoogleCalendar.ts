@@ -24,16 +24,20 @@ export const useGoogleCalendar = (clientId?: string) => {
   // Initialize Google API
   useEffect(() => {
     const initGapi = async () => {
-      if (!clientId || state.isInitialized) return;
+      if (!clientId) {
+        console.log('No client ID provided, skipping initialization');
+        return;
+      }
 
-      setState(prev => ({ ...prev, isLoading: true }));
+      if (state.isInitialized) {
+        console.log('Already initialized, skipping');
+        return;
+      }
+
+      console.log('Starting Google API initialization...');
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        // Load Google API script
-        if (!window.gapi) {
-          await loadGoogleApiScript();
-        }
-
         await GoogleCalendarService.initializeGapi(clientId);
         
         setState(prev => ({
@@ -43,9 +47,14 @@ export const useGoogleCalendar = (clientId?: string) => {
           isLoading: false,
           error: null
         }));
+
+        console.log('Google Calendar hook initialized successfully');
       } catch (error) {
+        console.error('Google Calendar initialization failed:', error);
         setState(prev => ({
           ...prev,
+          isInitialized: false,
+          isSignedIn: false,
           isLoading: false,
           error: error instanceof Error ? error.message : 'Failed to initialize Google Calendar'
         }));
@@ -58,6 +67,7 @@ export const useGoogleCalendar = (clientId?: string) => {
   // Sign in mutation
   const signInMutation = useMutation({
     mutationFn: async () => {
+      console.log('Starting Google sign-in...');
       const authResponse = await GoogleCalendarService.signIn();
       
       // Get current user
@@ -74,12 +84,14 @@ export const useGoogleCalendar = (clientId?: string) => {
         })
         .eq('id', user.id);
 
+      console.log('Google tokens saved to database');
       return authResponse;
     },
     onSuccess: () => {
-      setState(prev => ({ ...prev, isSignedIn: true }));
+      setState(prev => ({ ...prev, isSignedIn: true, error: null }));
     },
     onError: (error) => {
+      console.error('Sign-in error:', error);
       setState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to sign in to Google'
@@ -106,14 +118,22 @@ export const useGoogleCalendar = (clientId?: string) => {
       }
     },
     onSuccess: () => {
-      setState(prev => ({ ...prev, isSignedIn: false }));
+      setState(prev => ({ ...prev, isSignedIn: false, error: null }));
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+    },
+    onError: (error) => {
+      console.error('Sign-out error:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to sign out'
+      }));
     }
   });
 
   // Sync calendar events mutation
   const syncCalendarMutation = useMutation({
     mutationFn: async () => {
+      console.log('Starting calendar sync...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -190,22 +210,6 @@ export const useGoogleCalendar = (clientId?: string) => {
     isSigningOut: signOutMutation.isPending,
     isSyncing: syncCalendarMutation.isPending
   };
-};
-
-// Helper function to load Google API script
-const loadGoogleApiScript = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (window.gapi) {
-      resolve();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://apis.google.com/js/api.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Google API script'));
-    document.head.appendChild(script);
-  });
 };
 
 // Transform Google Calendar event to our database format
