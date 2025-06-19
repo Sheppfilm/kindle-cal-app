@@ -116,7 +116,11 @@ export type Database = {
           email: string
           google_access_token: string | null
           google_calendar_id: string | null
+          google_calendar_watch_channel_id: string | null
+          google_calendar_watch_expiration: string | null
+          google_calendar_watch_resource_id: string | null
           google_refresh_token: string | null
+          google_sync_token: string | null
           google_timezone: string | null
           id: string
           last_sync: string | null
@@ -128,7 +132,11 @@ export type Database = {
           email: string
           google_access_token?: string | null
           google_calendar_id?: string | null
+          google_calendar_watch_channel_id?: string | null
+          google_calendar_watch_expiration?: string | null
+          google_calendar_watch_resource_id?: string | null
           google_refresh_token?: string | null
+          google_sync_token?: string | null
           google_timezone?: string | null
           id?: string
           last_sync?: string | null
@@ -140,7 +148,11 @@ export type Database = {
           email?: string
           google_access_token?: string | null
           google_calendar_id?: string | null
+          google_calendar_watch_channel_id?: string | null
+          google_calendar_watch_expiration?: string | null
+          google_calendar_watch_resource_id?: string | null
           google_refresh_token?: string | null
+          google_sync_token?: string | null
           google_timezone?: string | null
           id?: string
           last_sync?: string | null
@@ -154,7 +166,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      upsert_calendar_event: {
+        Args: {
+          p_user_id: string
+          p_google_event_id: string
+          p_title: string
+          p_description: string
+          p_start_time: string
+          p_end_time: string
+          p_location: string
+          p_all_day: boolean
+          p_recurrence: string[]
+          p_status: string
+          p_visibility: string
+          p_creator_email: string
+          p_creator_name: string
+          p_organizer_email: string
+          p_organizer_name: string
+          p_attendees: Json
+          p_conference_data: Json
+          p_hangout_link: string
+          p_html_link: string
+          p_ical_uid: string
+          p_kind: string
+          p_sequence: number
+          p_transparency: string
+          p_event_type: string
+          p_raw_data: Json
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
