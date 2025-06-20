@@ -1,0 +1,450 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CALENDAR</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: black;
+        }
+        
+        .header {
+            border-bottom: 2px solid black;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+        
+        .clock {
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .nav {
+            border-bottom: 2px solid black;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .nav a {
+            text-decoration: none;
+            color: black;
+            padding: 8px 16px;
+            border: 2px solid black;
+            margin: 0 5px;
+            font-family: monospace;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+        
+        .nav a:hover {
+            background-color: black;
+            color: white;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .day-view {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .day-view th,
+        .day-view td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        .day-view th {
+            background-color: black;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        .hour-cell {
+            width: 60px;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        .event {
+            background-color: black;
+            color: white;
+            padding: 3px;
+            margin: 2px 0;
+            font-size: 9px;
+        }
+        
+        .month-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .month-grid th,
+        .month-grid td {
+            border: 1px solid black;
+            padding: 5px;
+            text-align: left;
+            vertical-align: top;
+            width: 14.28%;
+            height: 80px;
+        }
+        
+        .month-grid th {
+            background-color: black;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+            height: 30px;
+        }
+        
+        .day-number {
+            font-weight: bold;
+            font-size: 10px;
+            margin-bottom: 3px;
+        }
+        
+        .event-dot {
+            width: 6px;
+            height: 6px;
+            background-color: black;
+            margin: 1px 0;
+        }
+        
+        .other-month {
+            color: #999;
+        }
+        
+        .upcoming-events {
+            max-width: 600px;
+        }
+        
+        .event-item {
+            border: 2px solid black;
+            margin-bottom: 15px;
+            padding: 15px;
+        }
+        
+        .event-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        
+        .event-time {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .event-countdown {
+            font-size: 10px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .event-details {
+            font-size: 9px;
+            color: #666;
+        }
+        
+        .no-events {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CALENDAR</h1>
+        <div class="clock" id="clock">LOADING TIME...</div>
+    </div>
+    
+    <div class="nav">
+        <a href="#day" onclick="showView('day')">DAY</a>
+        <a href="#week" onclick="showView('week')">WEEK</a>
+        <a href="#month" onclick="showView('month')">MONTH</a>
+        <a href="#next" onclick="showView('next')">NEXT</a>
+    </div>
+    
+    <div class="content">
+        <!-- Day View -->
+        <div id="day-view" style="display: block;">
+            <h2>TODAY - FRIDAY, JUNE 20</h2>
+            <table class="day-view">
+                <tr>
+                    <th class="hour-cell">TIME</th>
+                    <th>EVENTS</th>
+                </tr>
+                <tr>
+                    <td class="hour-cell">08:00</td>
+                    <td>
+                        <div class="event">TEAM STANDUP<br>📍 ZOOM<br>08:00 - 08:30</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">09:00</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">10:00</td>
+                    <td>
+                        <div class="event">PROJECT REVIEW<br>📍 CONFERENCE ROOM A<br>10:00 - 11:00</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">11:00</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">12:00</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">13:00</td>
+                    <td>
+                        <div class="event">LUNCH MEETING<br>📍 RESTAURANT<br>13:00 - 14:00</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">14:00</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">15:00</td>
+                    <td>
+                        <div class="event">CLIENT CALL<br>📍 ZOOM<br>15:00 - 16:00</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">16:00</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">17:00</td>
+                    <td></td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Week View -->
+        <div id="week-view" style="display: none;">
+            <h2>WEEK OF JUNE 17</h2>
+            <table class="day-view">
+                <tr>
+                    <th class="hour-cell">TIME</th>
+                    <th>MON 17</th>
+                    <th>TUE 18</th>
+                    <th>WED 19</th>
+                    <th>THU 20</th>
+                    <th>FRI 21</th>
+                    <th>SAT 22</th>
+                    <th>SUN 23</th>
+                </tr>
+                <tr>
+                    <td class="hour-cell">08:00</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td><div class="event">STANDUP</div></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">10:00</td>
+                    <td><div class="event">MEETING</div></td>
+                    <td></td>
+                    <td></td>
+                    <td><div class="event">REVIEW</div></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">13:00</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td><div class="event">LUNCH</div></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="hour-cell">15:00</td>
+                    <td></td>
+                    <td><div class="event">CLIENT</div></td>
+                    <td></td>
+                    <td><div class="event">CLIENT</div></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Month View -->
+        <div id="month-view" style="display: none;">
+            <h2>JUNE 2025</h2>
+            <table class="month-grid">
+                <tr>
+                    <th>MON</th>
+                    <th>TUE</th>
+                    <th>WED</th>
+                    <th>THU</th>
+                    <th>FRI</th>
+                    <th>SAT</th>
+                    <th>SUN</th>
+                </tr>
+                <tr>
+                    <td class="other-month"><div class="day-number">26</div></td>
+                    <td class="other-month"><div class="day-number">27</div></td>
+                    <td class="other-month"><div class="day-number">28</div></td>
+                    <td class="other-month"><div class="day-number">29</div></td>
+                    <td class="other-month"><div class="day-number">30</div></td>
+                    <td class="other-month"><div class="day-number">31</div></td>
+                    <td><div class="day-number">1</div></td>
+                </tr>
+                <tr>
+                    <td><div class="day-number">2</div></td>
+                    <td><div class="day-number">3</div></td>
+                    <td><div class="day-number">4</div></td>
+                    <td><div class="day-number">5</div></td>
+                    <td><div class="day-number">6</div></td>
+                    <td><div class="day-number">7</div></td>
+                    <td><div class="day-number">8</div></td>
+                </tr>
+                <tr>
+                    <td><div class="day-number">9</div></td>
+                    <td><div class="day-number">10</div></td>
+                    <td><div class="day-number">11</div></td>
+                    <td><div class="day-number">12</div></td>
+                    <td><div class="day-number">13</div></td>
+                    <td><div class="day-number">14</div></td>
+                    <td><div class="day-number">15</div></td>
+                </tr>
+                <tr>
+                    <td><div class="day-number">16</div></td>
+                    <td><div class="day-number">17</div><div class="event-dot"></div></td>
+                    <td><div class="day-number">18</div><div class="event-dot"></div></td>
+                    <td><div class="day-number">19</div></td>
+                    <td><div class="day-number">20</div><div class="event-dot"></div><div class="event-dot"></div><div class="event-dot"></div><div class="event-dot"></div></td>
+                    <td><div class="day-number">21</div></td>
+                    <td><div class="day-number">22</div></td>
+                </tr>
+                <tr>
+                    <td><div class="day-number">23</div></td>
+                    <td><div class="day-number">24</div></td>
+                    <td><div class="day-number">25</div></td>
+                    <td><div class="day-number">26</div></td>
+                    <td><div class="day-number">27</div></td>
+                    <td><div class="day-number">28</div></td>
+                    <td><div class="day-number">29</div></td>
+                </tr>
+                <tr>
+                    <td><div class="day-number">30</div></td>
+                    <td class="other-month"><div class="day-number">1</div></td>
+                    <td class="other-month"><div class="day-number">2</div></td>
+                    <td class="other-month"><div class="day-number">3</div></td>
+                    <td class="other-month"><div class="day-number">4</div></td>
+                    <td class="other-month"><div class="day-number">5</div></td>
+                    <td class="other-month"><div class="day-number">6</div></td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Next Events View -->
+        <div id="next-view" style="display: none;">
+            <h2>UPCOMING EVENTS</h2>
+            <div class="upcoming-events">
+                <div class="event-item">
+                    <div class="event-title">TEAM STANDUP</div>
+                    <div class="event-time">FRI, JUN 20, 08:00 - 08:30</div>
+                    <div class="event-countdown">IN 2H 15M</div>
+                    <div class="event-details">📍 ZOOM<br>👥 5 ATTENDEES</div>
+                </div>
+                
+                <div class="event-item">
+                    <div class="event-title">PROJECT REVIEW</div>
+                    <div class="event-time">FRI, JUN 20, 10:00 - 11:00</div>
+                    <div class="event-countdown">IN 4H 15M</div>
+                    <div class="event-details">📍 CONFERENCE ROOM A<br>👥 3 ATTENDEES</div>
+                </div>
+                
+                <div class="event-item">
+                    <div class="event-title">LUNCH MEETING</div>
+                    <div class="event-time">FRI, JUN 20, 13:00 - 14:00</div>
+                    <div class="event-countdown">IN 7H 15M</div>
+                    <div class="event-details">📍 RESTAURANT<br>👥 2 ATTENDEES</div>
+                </div>
+                
+                <div class="event-item">
+                    <div class="event-title">CLIENT CALL</div>
+                    <div class="event-time">FRI, JUN 20, 15:00 - 16:00</div>
+                    <div class="event-countdown">IN 9H 15M</div>
+                    <div class="event-details">📍 ZOOM<br>🔗 VIDEO CALL AVAILABLE</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <noscript>
+        <div style="padding: 20px; text-align: center; border: 2px solid black; margin: 20px;">
+            <h2>CALENDAR</h2>
+            <p>This calendar works best with JavaScript enabled, but the basic content is still accessible.</p>
+        </div>
+    </noscript>
+    
+    <script>
+        // Very basic JavaScript for older browsers
+        function showView(viewName) {
+            var views = ['day-view', 'week-view', 'month-view', 'next-view'];
+            for (var i = 0; i < views.length; i++) {
+                var element = document.getElementById(views[i]);
+                if (element) {
+                    element.style.display = 'none';
+                }
+            }
+            var targetView = document.getElementById(viewName + '-view');
+            if (targetView) {
+                targetView.style.display = 'block';
+            }
+        }
+        
+        // Simple clock update
+        function updateClock() {
+            var now = new Date();
+            var timeString = now.toLocaleString();
+            var clockElement = document.getElementById('clock');
+            if (clockElement) {
+                clockElement.innerHTML = timeString;
+            }
+        }
+        
+        // Update clock every minute
+        updateClock();
+        setInterval(updateClock, 60000);
+    </script>
+</body>
+</html>
